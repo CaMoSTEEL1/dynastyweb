@@ -150,7 +150,7 @@ export default function QuestionDisplay({
           <p className="font-serif text-base leading-relaxed text-ink2">
             &ldquo;{displayText}
             {!isComplete && <span className="animate-pulse text-dw-accent">|</span>}
-            {isComplete && "&rdquo;"}
+            {isComplete && "\u201D"}
           </p>
         </div>
       </div>

@@ -105,6 +105,7 @@ export default function PressConferencePage({
   const [isFollowUp, setIsFollowUp] = useState(false);
   const [currentFollowUp, setCurrentFollowUp] = useState<string | null>(null);
   const [currentOptions, setCurrentOptions] = useState<ResponseOption[] | null>(null);
+  const [pendingNextOptions, setPendingNextOptions] = useState<ResponseOption[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNextButton, setShowNextButton] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -275,7 +276,8 @@ export default function PressConferencePage({
             });
             setCurrentFollowUp(data.followUp);
             setIsFollowUp(true);
-            setCurrentOptions(data.nextOptions);
+            // Store next-question options for after the follow-up
+            setPendingNextOptions(data.nextOptions);
             setIsSubmitting(false);
             return;
           }
@@ -290,9 +292,8 @@ export default function PressConferencePage({
           };
           setExchanges((prev) => [...prev, exchange]);
 
-          if (data.nextOptions) {
-            setCurrentOptions(data.nextOptions);
-          }
+          // Store options for the next question
+          setPendingNextOptions(data.nextOptions);
         } else {
           const exchange: PressConfExchange = {
             question: currentQuestion,
@@ -371,7 +372,20 @@ export default function PressConferencePage({
     setIsFollowUp(false);
     setCurrentFollowUp(null);
     setCurrentExchange(null);
-  }, [currentQuestionIndex, questions, exchanges, context]);
+
+    // Use pending options from the previous question's API response
+    if (pendingNextOptions && pendingNextOptions.length > 0) {
+      setCurrentOptions(pendingNextOptions);
+      setPendingNextOptions(null);
+    } else if (context) {
+      // Fetch fresh options if none were pre-generated
+      fetchInitialOptions(questions[nextIndex], {
+        school: context.school,
+        coachName: context.coachName,
+        week: context.week,
+      }).then((opts) => setCurrentOptions(opts));
+    }
+  }, [currentQuestionIndex, questions, exchanges, context, pendingNextOptions]);
 
   if (loading) {
     return (
