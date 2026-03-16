@@ -9,6 +9,7 @@ import {
   generateRecruitingNote,
   generatePressConference,
 } from "@/lib/ai/generators";
+import { updateSeasonState } from "@/lib/state/updater";
 import type { SeasonState, WeeklyInput } from "@/lib/state/schema";
 
 function sseEvent(data: {
@@ -164,6 +165,16 @@ export async function GET(
             send(type, { error: true, message: `Failed to generate ${type}` });
           }
         }
+
+        // Update season state with this week's results
+        const updatedState = updateSeasonState(seasonState, rawInput);
+        await supabase
+          .from("seasons")
+          .update({
+            season_state: updatedState as unknown as Record<string, unknown>,
+            current_week: rawInput.week + 1,
+          })
+          .eq("id", season.id as string);
 
         // Mark submission as complete
         await supabase

@@ -40,8 +40,12 @@ interface DynastyRow {
 
 interface ContentCacheRow {
   content_type: string;
-  week: number;
   content: ShowTranscript;
+}
+
+interface SubmissionRow {
+  id: string;
+  week: number;
 }
 
 export default function ShowsPage({
@@ -62,6 +66,7 @@ export default function ShowsPage({
   const [seasonId, setSeasonId] = useState<string | null>(null);
   const [weekTranscripts, setWeekTranscripts] = useState<Map<ShowType, ShowTranscript>>(new Map());
   const [archivedShows, setArchivedShows] = useState<ArchivedShow[]>([]);
+  const [latestSubmissionId, setLatestSubmissionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -83,7 +88,7 @@ export default function ShowsPage({
       .from("seasons")
       .select("id, current_week, season_state, narrative_memory")
       .eq("dynasty_id", dynastyId)
-      .order("season_number", { ascending: false })
+      .order("year", { ascending: false })
       .limit(1)
       .single();
 
@@ -98,33 +103,46 @@ export default function ShowsPage({
     setSeasonState(typedSeason.season_state);
     setNarrativeMemory(typedSeason.narrative_memory ?? "");
 
-    const { data: cachedContent } = await supabase
-      .from("content_cache")
-      .select("content_type, week, content")
+    // Get all complete submissions for this season to find cached shows
+    const { data: submissions } = await supabase
+      .from("weekly_submissions")
+      .select("id, week")
       .eq("season_id", typedSeason.id)
-      .like("content_type", "show_%");
+      .eq("status", "complete")
+      .order("week", { ascending: false });
 
-    if (cachedContent && cachedContent.length > 0) {
-      const thisWeekMap = new Map<ShowType, ShowTranscript>();
-      const archived: ArchivedShow[] = [];
+    if (submissions && submissions.length > 0) {
+      setLatestSubmissionId((submissions as SubmissionRow[])[0].id);
+      const subIds = (submissions as SubmissionRow[]).map((s) => s.id);
+      const weekBySubId = new Map(
+        (submissions as SubmissionRow[]).map((s) => [s.id, s.week])
+      );
 
-      for (const row of cachedContent as ContentCacheRow[]) {
-        const showType = row.content_type.replace("show_", "") as ShowType;
-        const transcript = row.content;
+      const { data: cachedContent } = await supabase
+        .from("content_cache")
+        .select("content_type, content, weekly_submission_id")
+        .in("weekly_submission_id", subIds)
+        .like("content_type", "show_%");
 
-        if (row.week === typedSeason.current_week) {
-          thisWeekMap.set(showType, transcript);
+      if (cachedContent && cachedContent.length > 0) {
+        const thisWeekMap = new Map<ShowType, ShowTranscript>();
+        const archived: ArchivedShow[] = [];
+
+        for (const row of cachedContent as (ContentCacheRow & { weekly_submission_id: string })[]) {
+          const showType = row.content_type.replace("show_", "") as ShowType;
+          const transcript = row.content;
+          const week = weekBySubId.get(row.weekly_submission_id) ?? 0;
+
+          if (week === typedSeason.current_week) {
+            thisWeekMap.set(showType, transcript);
+          }
+
+          archived.push({ week, showType, transcript });
         }
 
-        archived.push({
-          week: row.week,
-          showType,
-          transcript,
-        });
+        setWeekTranscripts(thisWeekMap);
+        setArchivedShows(archived.sort((a, b) => b.week - a.week));
       }
-
-      setWeekTranscripts(thisWeekMap);
-      setArchivedShows(archived.sort((a, b) => b.week - a.week));
     }
 
     setLoading(false);
@@ -135,7 +153,7 @@ export default function ShowsPage({
   }, [loadData]);
 
   async function handleGenerateShow(config: ShowConfig) {
-    if (!dynasty || !seasonState || !seasonId || generatingShow) return;
+    if (!dynasty || !seasonState || !seasonId || !latestSubmissionId || generatingShow) return;
 
     setGeneratingShow(config.type);
 
@@ -157,15 +175,11 @@ export default function ShowsPage({
 
       if (!transcript.error) {
         const supabase = createClient();
-        await supabase.from("content_cache").upsert(
-          {
-            season_id: seasonId,
-            content_type: `show_${config.type}`,
-            week: currentWeek,
-            content: transcript,
-          },
-          { onConflict: "season_id,content_type,week" }
-        );
+        await supabase.from("content_cache").insert({
+          weekly_submission_id: latestSubmissionId,
+          content_type: `show_${config.type}`,
+          content: transcript,
+        });
 
         setWeekTranscripts((prev) => {
           const next = new Map(prev);

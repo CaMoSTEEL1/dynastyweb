@@ -112,14 +112,14 @@ export default function SocialPage() {
       });
 
       // Load social posts from content_cache
-      const { data: cached } = await supabase
+      const { data: cachedRows } = await supabase
         .from("content_cache")
         .select("content")
         .eq("weekly_submission_id", submission.id)
         .eq("content_type", "social_posts")
-        .limit(1)
-        .single();
+        .limit(1);
 
+      const cached = cachedRows?.[0] ?? null;
       const socialContent = cached?.content as SocialPostsContent | null;
 
       if (
