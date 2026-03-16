@@ -16,7 +16,6 @@ interface SeasonRow {
 
 interface ContentCacheRow {
   content_type: string;
-  week: number;
   content: NILPageContent;
 }
 
@@ -41,7 +40,7 @@ export default function NILPage({
       .from("seasons")
       .select("id, current_week")
       .eq("dynasty_id", dynastyId)
-      .order("season_number", { ascending: false })
+      .order("year", { ascending: false })
       .limit(1)
       .single();
 
@@ -54,18 +53,28 @@ export default function NILPage({
     setSeasonId(typedSeason.id);
     setCurrentWeek(typedSeason.current_week);
 
-    const { data: cached } = await supabase
-      .from("content_cache")
-      .select("content_type, week, content")
+    // Find latest complete submission to look up cached NIL content
+    const { data: submission } = await supabase
+      .from("weekly_submissions")
+      .select("id")
       .eq("season_id", typedSeason.id)
-      .eq("content_type", "nil_offers")
-      .eq("week", typedSeason.current_week)
+      .eq("status", "complete")
+      .order("week", { ascending: false })
       .limit(1)
       .single();
 
-    if (cached) {
-      const row = cached as ContentCacheRow;
-      setContent(row.content);
+    if (submission) {
+      const { data: cachedRows } = await supabase
+        .from("content_cache")
+        .select("content_type, content")
+        .eq("weekly_submission_id", submission.id as string)
+        .eq("content_type", "nil_offers")
+        .limit(1);
+
+      if (cachedRows && cachedRows.length > 0) {
+        const row = cachedRows[0] as ContentCacheRow;
+        setContent(row.content);
+      }
     }
 
     setLoading(false);

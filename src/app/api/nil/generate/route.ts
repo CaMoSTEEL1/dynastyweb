@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       .from("seasons")
       .select("id, current_week, narrative_memory, season_state")
       .eq("dynasty_id", dynastyId)
-      .order("season_number", { ascending: false })
+      .order("year", { ascending: false })
       .limit(1)
       .single();
 
@@ -109,29 +109,38 @@ export async function POST(request: NextRequest) {
       portalDrama: portalResult.drama,
     };
 
-    const cacheInserts = [
-      {
-        season_id: seasonId,
-        content_type: "nil_offers",
-        week: currentWeek,
-        content: nilContent,
-      },
-      {
-        season_id: seasonId,
-        content_type: "nil_social",
-        week: currentWeek,
-        content: { posts: socialPosts },
-      },
-    ];
+    // Find latest complete submission to attach cached content
+    const { data: latestSub } = await supabase
+      .from("weekly_submissions")
+      .select("id")
+      .eq("season_id", seasonId)
+      .eq("status", "complete")
+      .order("week", { ascending: false })
+      .limit(1)
+      .single();
 
-    const { error: cacheError } = await supabase
-      .from("content_cache")
-      .upsert(cacheInserts, {
-        onConflict: "season_id,content_type,week",
-      });
+    if (latestSub) {
+      const subId = latestSub.id as string;
+      const cacheInserts = [
+        {
+          weekly_submission_id: subId,
+          content_type: "nil_offers",
+          content: nilContent,
+        },
+        {
+          weekly_submission_id: subId,
+          content_type: "nil_social",
+          content: { posts: socialPosts },
+        },
+      ];
 
-    if (cacheError) {
-      console.error("Failed to cache NIL content:", cacheError.message);
+      const { error: cacheError } = await supabase
+        .from("content_cache")
+        .insert(cacheInserts);
+
+      if (cacheError) {
+        console.error("Failed to cache NIL content:", cacheError.message);
+      }
     }
 
     return NextResponse.json({
