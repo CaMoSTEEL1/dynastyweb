@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ResponseOption } from "@/lib/ai/press-conference-types";
+import { PRESS_CONFERENCE_DB } from "@/lib/data/press-conference-db";
 
 interface RespondRequestBody {
   question: string;
@@ -30,12 +31,29 @@ export async function POST(request: Request): Promise<NextResponse<RespondResult
 
     const anthropic = new Anthropic();
 
+    // Pick 3 random response examples to guide tone
+    const shuffled = [...PRESS_CONFERENCE_DB].sort(() => Math.random() - 0.5);
+    const responseExamples = shuffled.slice(0, 3).map((e) => {
+      const r = e.responses;
+      return `Q: "${e.question}"\n  honest: "${r.honest}"\n  deflect: "${r.deflect}"\n  coachspeak: "${r.coachspeak}"\n  fiery: "${r.fiery}"`;
+    }).join("\n\n");
+
     const systemPrompt = `You are a college football press conference simulator engine. You evaluate coach responses and generate realistic follow-up questions.
 
 Context:
 - School: ${sessionContext.school}
 - Coach: ${sessionContext.coachName}
 - Week: ${sessionContext.week}
+
+Here are examples of the TONE and VOICE for each response style. Use these as guidance for generating response options:
+
+${responseExamples}
+
+Key tone definitions:
+- honest: Direct, vulnerable, real talk. Acknowledges truth without spin.
+- deflect: Redirects, stays safe, non-committal. Classic "next question" energy.
+- coachspeak: Process-oriented, cliché-laden but polished. "We just gotta execute."
+- fiery: Aggressive, passionate, confrontational. Coaches going OFF.
 
 You must respond with valid JSON only, no markdown formatting.`;
 

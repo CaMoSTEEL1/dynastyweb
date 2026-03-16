@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PromptContext } from "./context-builder";
+import { PRESS_CONFERENCE_DB } from "@/lib/data/press-conference-db";
+import { SOCIAL_MEDIA_DB } from "@/lib/data/social-media-db";
 
 const client = new Anthropic();
 
@@ -184,18 +186,38 @@ export async function generateSocialPosts(
   ctx: PromptContext
 ): Promise<SocialPostsContent> {
   try {
+    // Sample 8 random patterns from the DB as few-shot examples
+    const socialShuffled = [...SOCIAL_MEDIA_DB].sort(() => Math.random() - 0.5);
+    const socialExamples = socialShuffled.slice(0, 8);
+    const socialExampleBlock = socialExamples
+      .map(
+        (e) =>
+          `- [${e.type.toUpperCase()}] "${e.body}" (likes: ${e.engagement.likes[0]}-${e.engagement.likes[1]})`
+      )
+      .join("\n");
+
     const prompt = [
-      "Generate 8 social media posts reacting to this game as JSON with this exact schema:",
+      "Generate 10 social media posts reacting to this game as JSON with this exact schema:",
       '{"posts": [{"handle": "string", "displayName": "string", "type": "fan"|"rival"|"analyst"|"insider"|"reddit", "body": "string", "likes": number, "reposts": number}]}',
       "",
       `Posts should react to ${ctx.school}'s Week ${ctx.week} result.`,
-      "Include a mix of types: at least 2 fan posts, 1 rival fan, 2 analysts, 1 insider, and 2 reddit-style posts.",
-      "Fan posts should be emotional and use casual language or all caps.",
-      "Rival posts should be snarky or dismissive.",
-      "Analyst posts should be measured and use stats from the context.",
-      "Insider posts should hint at behind-the-scenes knowledge.",
-      "Reddit posts should use reddit-style formatting and humor.",
-      "Vary the likes/reposts realistically (fans: 5-200, analysts: 100-2000, insiders: 500-5000).",
+      "Include a diverse mix: at least 3 fan posts, 1 rival fan troll, 2 analysts, 1 insider, 1 reddit-style, and 2 funny/viral posts.",
+      "",
+      "Here are examples of the VOICE and ENERGY to aim for (adapt to this specific game, don't copy verbatim):",
+      socialExampleBlock,
+      "",
+      "Key style notes for each type:",
+      "- FAN: Emotional, ALL CAPS energy, overreactions, heart-on-sleeve. Self-deprecating after losses, euphoric after wins.",
+      "- RIVAL/TROLL: Snarky, schadenfreude, 'scoreboard' energy, mocking. Reference the actual opponent.",
+      "- ANALYST: Film references, stats, scheme observations. Measured but with a clear take. Think ESPN or 247Sports voice.",
+      "- INSIDER: 'Sources tell me...' energy. Locker room mood, coaching staff reactions, recruiting implications.",
+      "- REDDIT: Self-deprecating humor, absurd comparisons, copypasta energy, therapy jokes.",
+      "",
+      "IMPORTANT:",
+      "- Use the ACTUAL score, opponent name, and game events from the context below",
+      "- Make handles feel real: @CFBTakesMachine, @BigGameBaker, @{school}Insider, etc.",
+      "- Vary engagement realistically: viral funny posts get 1000+ likes, niche analyst posts get 100-500",
+      "- NO HTML entities. Use plain text quotes and punctuation.",
       "",
       "Context:",
       ctx.userContext,
@@ -348,6 +370,16 @@ export async function generatePressConference(
   ctx: PromptContext
 ): Promise<PressConfContent> {
   try {
+    // Sample 5 random patterns from the DB as few-shot examples
+    const shuffled = [...PRESS_CONFERENCE_DB].sort(() => Math.random() - 0.5);
+    const examples = shuffled.slice(0, 5);
+    const exampleBlock = examples
+      .map(
+        (e) =>
+          `- [${e.tone.toUpperCase()}] "${e.question}" (category: ${e.category})`
+      )
+      .join("\n");
+
     const prompt = [
       "Generate 6 press conference questions for the post-game presser as JSON with this exact schema:",
       '{"questions": [{"reporterName": "string", "outlet": "string", "question": "string", "tone": "friendly"|"neutral"|"hostile"|"gotcha"}]}',
@@ -359,6 +391,17 @@ export async function generatePressConference(
       "- After a tough loss: mostly hostile/neutral with gotcha questions about the coach's future",
       "- Mid-season: mix based on overall season trajectory",
       "Questions should reference specific game events and stats from the context.",
+      "Make questions sharp, specific, and authentic — the way real CFB reporters talk.",
+      "",
+      "Here are examples of the TONE and STYLE to aim for (adapt them to this specific game, don't copy verbatim):",
+      exampleBlock,
+      "",
+      "Key style notes:",
+      "- Hostile questions should put the coach on the spot: job security, play calling, staff changes",
+      "- Gotcha questions should set up a trap: predecessor comparisons, social media criticism, rival trash talk",
+      "- Friendly questions should give the coach a chance to praise players or celebrate",
+      "- Neutral questions should probe for real analysis: adjustments, game plan, injury updates",
+      "- Reference the ACTUAL opponent, score, and specific game events from the context below",
       "",
       "Context:",
       ctx.userContext,
