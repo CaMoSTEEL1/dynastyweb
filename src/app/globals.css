@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* DynastyWire — Dark Editorial Theme (always dark) */
+:root {
+  /* Editorial surfaces */
+  --paper: #1c1a17;
+  --paper2: #252320;
+  --paper3: #2e2c28;
+  --paper4: #3a3835;
+
+  /* Ink hierarchy */
+  --ink: #e8e4dc;
+  --ink2: #b8b4ac;
+  --ink3: #7a776f;
+
+  /* Accent */
+  --dw-accent: #b5202a;
+  --dw-accent2: #d4943a;
+
+  /* Functional */
+  --dw-green: #22c55e;
+  --dw-red: #ef4444;
+  --dw-yellow: #f59e0b;
+  --dw-border: #3a3835;
+
+  --radius: 0.375rem;
+
+  /* shadcn tokens — dark editorial */
+  --background: #1c1a17;
+  --foreground: #e8e4dc;
+  --card: #252320;
+  --card-foreground: #e8e4dc;
+  --popover: #252320;
+  --popover-foreground: #e8e4dc;
+  --primary: #b5202a;
+  --primary-foreground: #e8e4dc;
+  --secondary: #2e2c28;
+  --secondary-foreground: #e8e4dc;
+  --muted: #2e2c28;
+  --muted-foreground: #7a776f;
+  --accent: #2e2c28;
+  --accent-foreground: #e8e4dc;
+  --destructive: #ef4444;
+  --border: #3a3835;
+  --input: #3a3835;
+  --ring: #b5202a;
+  --chart-1: #b5202a;
+  --chart-2: #d4943a;
+  --chart-3: #22c55e;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #252320;
+  --sidebar-foreground: #e8e4dc;
+  --sidebar-primary: #b5202a;
+  --sidebar-primary-foreground: #e8e4dc;
+  --sidebar-accent: #2e2c28;
+  --sidebar-accent-foreground: #e8e4dc;
+  --sidebar-border: #3a3835;
+  --sidebar-ring: #b5202a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-paper2: var(--paper2);
+  --color-paper3: var(--paper3);
+  --color-paper4: var(--paper4);
+  --color-ink: var(--ink);
+  --color-ink2: var(--ink2);
+  --color-ink3: var(--ink3);
+  --color-dw-accent: var(--dw-accent);
+  --color-dw-accent2: var(--dw-accent2);
+  --color-dw-green: var(--dw-green);
+  --color-dw-red: var(--dw-red);
+  --color-dw-yellow: var(--dw-yellow);
+  --color-dw-border: var(--dw-border);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --font-sans: var(--font-sans);
+  --font-headline: var(--font-headline);
+  --font-serif: var(--font-serif);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--dw-border); border-radius: 3px; }
+
+/* Editorial rules */
+.rule-diamond {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.rule-diamond::before,
+.rule-diamond::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--dw-border);
+}
+.rule-diamond .diamond {
+  width: 6px;
+  height: 6px;
+  background: var(--dw-accent);
+  transform: rotate(45deg);
+}
+
+/* Column rules for newspaper layout */
+.column-rule {
+  border-right: 1px solid var(--dw-border);
+}
+
+/* Drop cap for lead stories */
+.drop-cap::first-letter {
+  float: left;
+  font-family: var(--font-headline);
+  font-size: 3.5em;
+  line-height: 0.8;
+  margin-right: 0.1em;
+  margin-top: 0.05em;
+  color: var(--dw-accent);
+}
+
+/* Breaking ticker animation */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.ticker-scroll {
+  animation: ticker-scroll 30s linear infinite;
+}
+
+/* Pulse skeleton */
+@keyframes editorial-pulse {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.25; }
+}
+.skeleton-pulse {
+  animation: editorial-pulse 2s ease-in-out infinite;
+  background: var(--ink3);
+  border-radius: 2px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
