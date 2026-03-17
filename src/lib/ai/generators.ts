@@ -69,11 +69,12 @@ function parseJSON<T>(raw: string): T | null {
 
 async function callClaude(
   systemPrompt: string,
-  userMessage: string
+  userMessage: string,
+  maxTokens: number = 1000
 ): Promise<string> {
   const response = await client.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 1000,
+    max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userMessage }],
   });
@@ -223,7 +224,7 @@ export async function generateSocialPosts(
       ctx.userContext,
     ].join("\n");
 
-    const raw = await callClaude(ctx.systemPrompt, prompt);
+    const raw = await callClaude(ctx.systemPrompt, prompt, 2000);
     const parsed = parseJSON<SocialPostsContent>(raw);
 
     const validTypes = new Set(["fan", "rival", "analyst", "insider", "reddit"]);
@@ -407,7 +408,7 @@ export async function generatePressConference(
       ctx.userContext,
     ].join("\n");
 
-    const raw = await callClaude(ctx.systemPrompt, prompt);
+    const raw = await callClaude(ctx.systemPrompt, prompt, 1500);
     const parsed = parseJSON<PressConfContent>(raw);
 
     const validTones = new Set(["friendly", "neutral", "hostile", "gotcha"]);

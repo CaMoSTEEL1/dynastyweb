@@ -53,6 +53,7 @@ export default function SocialPage() {
 
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [threadPost, setThreadPost] = useState<SocialPost | null>(null);
   const [visibleCount, setVisibleCount] = useState(0);
   const [sessionContext, setSessionContext] = useState<{
@@ -127,11 +128,17 @@ export default function SocialPage() {
         Array.isArray(socialContent.posts) &&
         socialContent.posts.length > 0
       ) {
-        const hydrated = socialContent.posts.map((p, i) => hydratePost(p, i));
-        setPosts(hydrated);
+        // Check if the cached content was an error fallback
+        if (socialContent.error) {
+          setError("Social content generation failed during your weekly report. Try submitting your weekly data again to regenerate.");
+        } else {
+          const hydrated = socialContent.posts.map((p, i) => hydratePost(p, i));
+          setPosts(hydrated);
+        }
       }
     } catch (err) {
       console.error("Failed to load social data:", err);
+      setError("Failed to load social data. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -166,6 +173,20 @@ export default function SocialPage() {
             <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:200ms]" />
             <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:400ms]" />
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div>
+        <SectionHeader
+          title="THE WIRE"
+          subtitle="What they're saying across the internet"
+        />
+        <div className="mt-8 rounded border border-dw-red/30 bg-dw-red/10 px-6 py-12 text-center">
+          <p className="font-serif text-dw-red">{error}</p>
         </div>
       </div>
     );

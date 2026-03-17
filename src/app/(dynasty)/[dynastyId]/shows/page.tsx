@@ -99,7 +99,8 @@ export default function ShowsPage({
 
     const typedSeason = season as SeasonRow;
     setSeasonId(typedSeason.id);
-    setCurrentWeek(typedSeason.current_week);
+    // current_week is already incremented, so display the last completed week
+    setCurrentWeek(typedSeason.current_week - 1);
     setSeasonState(typedSeason.season_state);
     setNarrativeMemory(typedSeason.narrative_memory ?? "");
 
@@ -133,7 +134,9 @@ export default function ShowsPage({
           const transcript = row.content;
           const week = weekBySubId.get(row.weekly_submission_id) ?? 0;
 
-          if (week === typedSeason.current_week) {
+          // current_week is already incremented by advanceWeek, so the
+          // most recently completed week is current_week - 1
+          if (week === typedSeason.current_week - 1) {
             thisWeekMap.set(showType, transcript);
           }
 

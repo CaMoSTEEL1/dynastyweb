@@ -1,13 +1,61 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
-const tickerItems = [
-  "Dynasty Mode just got real.",
-  "Welcome to DynastyWire — where every game writes a headline.",
-  "The Wire never sleeps.",
-  "Your story starts here.",
-];
+interface BreakingTickerProps {
+  items: string[];
+}
 
-export default function BreakingTicker() {
+const ROTATE_INTERVAL_MS = 45_000; // rotate items every 45s
+const BATCH_SIZE = 5; // show 5 items at a time
+
+export default function BreakingTicker({ items }: BreakingTickerProps) {
+  // Shuffle items on mount for variety per session
+  const [shuffled, setShuffled] = useState<string[]>([]);
+  const [batchIndex, setBatchIndex] = useState(0);
+
+  useEffect(() => {
+    const copy = [...items];
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    setShuffled(copy);
+    setBatchIndex(0);
+  }, [items]);
+
+  // Rotate to next batch of items periodically
+  const rotateBatch = useCallback(() => {
+    setBatchIndex((prev) => {
+      const totalBatches = Math.ceil(shuffled.length / BATCH_SIZE);
+      return totalBatches > 0 ? (prev + 1) % totalBatches : 0;
+    });
+  }, [shuffled.length]);
+
+  useEffect(() => {
+    if (shuffled.length <= BATCH_SIZE) return;
+    const timer = setInterval(rotateBatch, ROTATE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [rotateBatch, shuffled.length]);
+
+  const currentItems =
+    shuffled.length > 0
+      ? shuffled.slice(
+          batchIndex * BATCH_SIZE,
+          batchIndex * BATCH_SIZE + BATCH_SIZE
+        )
+      : items.slice(0, BATCH_SIZE);
+
+  // If we wrapped around and have fewer items, fill from the start
+  const displayItems =
+    currentItems.length < BATCH_SIZE && shuffled.length > BATCH_SIZE
+      ? [
+          ...currentItems,
+          ...shuffled.slice(0, BATCH_SIZE - currentItems.length),
+        ]
+      : currentItems;
+
   const separator = (
     <span className="mx-4 text-white/50 select-none" aria-hidden="true">
       &#9670;
@@ -15,8 +63,8 @@ export default function BreakingTicker() {
   );
 
   const renderItems = () =>
-    tickerItems.map((item, i) => (
-      <span key={i} className="inline-flex items-center">
+    displayItems.map((item, i) => (
+      <span key={`${batchIndex}-${i}`} className="inline-flex items-center">
         <span className="font-serif text-sm text-white/90 whitespace-nowrap">
           {item}
         </span>

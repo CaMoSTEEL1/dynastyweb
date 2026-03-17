@@ -140,19 +140,9 @@ export default function PressConferencePage({
         return;
       }
 
-      const week = (season.current_week as number) ?? 1;
-
-      setContext({
-        school: dynasty.school as string,
-        coachName: dynasty.coach_name as string,
-        week,
-        seasonId: season.id as string,
-        dynastyId,
-      });
-
       const { data: submission } = await supabase
         .from("weekly_submissions")
-        .select("id, raw_input")
+        .select("id, week, raw_input")
         .eq("season_id", season.id as string)
         .eq("status", "complete")
         .order("week", { ascending: false })
@@ -163,6 +153,18 @@ export default function PressConferencePage({
         setLoading(false);
         return;
       }
+
+      // Use the completed submission's week, not current_week
+      // (current_week is already incremented to the next week by advanceWeek)
+      const week = (submission.week as number) ?? 1;
+
+      setContext({
+        school: dynasty.school as string,
+        coachName: dynasty.coach_name as string,
+        week,
+        seasonId: season.id as string,
+        dynastyId,
+      });
 
       // Try to load AI-generated press conference questions from content_cache
       const { data: cached } = await supabase
@@ -232,8 +234,9 @@ export default function PressConferencePage({
         };
 
         setExchanges((prev) => [...prev, completedExchange]);
-        setIsFollowUp(false);
-        setCurrentFollowUp(null);
+        // Keep isFollowUp=true and currentFollowUp set so the question text
+        // doesn't revert (which would reset hasAnswered in QuestionDisplay).
+        // handleNextQuestion will clean up follow-up state when advancing.
         setCurrentExchange(null);
         setIsSubmitting(false);
         setShowNextButton(true);
