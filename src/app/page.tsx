@@ -157,7 +157,7 @@ export default async function LandingPage() {
                   className={cn(
                     "rounded bg-dw-accent px-5 py-2",
                     "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-                    "transition-opacity hover:opacity-90"
+                    "transition-colors hover:bg-dw-accent2"
                   )}
                 >
                   My Dynasty
@@ -169,7 +169,7 @@ export default async function LandingPage() {
                   className={cn(
                     "rounded bg-dw-accent px-5 py-2",
                     "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-                    "transition-opacity hover:opacity-90"
+                    "transition-colors hover:bg-dw-accent2"
                   )}
                 >
                   Create Dynasty
@@ -189,7 +189,7 @@ export default async function LandingPage() {
                 className={cn(
                   "rounded bg-dw-accent px-5 py-2",
                   "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-                  "transition-opacity hover:opacity-90"
+                  "transition-colors hover:bg-dw-accent2"
                 )}
               >
                 Sign Up
@@ -231,7 +231,7 @@ export default async function LandingPage() {
             className={cn(
               "inline-block rounded bg-dw-accent px-8 py-3",
               "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90"
+              "transition-colors hover:bg-dw-accent2"
             )}
           >
             Start Your Dynasty
@@ -401,7 +401,7 @@ export default async function LandingPage() {
           className={cn(
             "mt-8 inline-block rounded bg-dw-accent px-10 py-3",
             "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-            "transition-opacity hover:opacity-90"
+            "transition-colors hover:bg-dw-accent2"
           )}
         >
           Start Your Dynasty

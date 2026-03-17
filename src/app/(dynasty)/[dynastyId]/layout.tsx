@@ -171,10 +171,23 @@ export default async function DynastyLayout({
     seasonState
   );
 
+  // Derive last result from streak direction (most recent game)
+  const lastResult = seasonState?.weekResults && seasonState.weekResults.length > 0
+    ? seasonState.weekResults[seasonState.weekResults.length - 1].result
+    : null;
+
   return (
     <SettingsProvider dynasty={dynastyInfo} initialSeason={seasonInfo}>
       <TutorialProvider>
-        <Masthead />
+        <Masthead
+          school={dynasty.school as string}
+          coachName={dynasty.coach_name as string}
+          fanSentiment={seasonState?.fanSentiment ?? null}
+          hotSeatLevel={seasonState?.hotSeatLevel ?? null}
+          seasonMomentum={seasonState?.seasonMomentum ?? null}
+          lastResult={lastResult}
+          record={seasonState?.record ?? null}
+        />
         <NavBar dynastyId={dynastyId} />
         <BreakingTicker items={tickerItems} />
         <main className="max-w-7xl mx-auto px-4 py-6">{children}</main>

@@ -130,7 +130,7 @@ export default function PricingCard() {
             className={cn(
               "mt-6 block rounded py-2.5 text-center",
               "font-sans text-sm font-semibold uppercase tracking-wider",
-              "transition-opacity hover:opacity-90",
+              "transition-colors hover:bg-dw-accent2",
               tier.highlighted
                 ? "bg-dw-accent text-white"
                 : "border border-dw-border bg-paper2 text-ink hover:bg-paper3"

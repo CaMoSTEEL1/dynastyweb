@@ -271,6 +271,7 @@ export default function ShowsPage({
       <SectionHeader
         title="SHOWS"
         subtitle="Broadcast coverage of your dynasty"
+        variant="shows"
       />
 
       <div className="mt-6 flex gap-4 border-b border-dw-border">
@@ -321,13 +322,18 @@ export default function ShowsPage({
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleConfigs.map((config) => {
+          <div className="flex flex-col gap-4">
+            {visibleConfigs.map((config, index) => {
               const hasTranscript = weekTranscripts.has(config.type);
               const isGenerating = generatingShow === config.type;
+              // First show is the featured flagship — full-width treatment
+              const isFeatured = index === 0;
 
               return (
-                <div key={config.type} className="relative">
+                <div
+                  key={config.type}
+                  className={cn("relative", !isFeatured && "sm:col-span-1")}
+                >
                   {isGenerating && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center rounded border border-dw-accent/20 bg-paper/80 backdrop-blur-sm">
                       <div className="flex flex-col items-center gap-2">
@@ -342,6 +348,7 @@ export default function ShowsPage({
                     config={config}
                     available={hasTranscript || hasGamesPlayed}
                     week={currentWeek}
+                    featured={isFeatured}
                     onSelect={() => handleSelectShow(config)}
                   />
                 </div>

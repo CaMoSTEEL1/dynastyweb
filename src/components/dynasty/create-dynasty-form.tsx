@@ -232,7 +232,7 @@ export default function CreateDynastyForm() {
           "w-full bg-dw-accent text-paper font-sans text-sm uppercase tracking-wider",
           "py-3 px-6 rounded-sm",
           "transition-opacity duration-150",
-          "hover:opacity-90",
+          "hover:bg-dw-accent2",
           "disabled:opacity-40 disabled:cursor-not-allowed"
         )}
       >

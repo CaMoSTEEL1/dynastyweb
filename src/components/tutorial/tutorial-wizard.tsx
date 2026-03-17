@@ -255,7 +255,7 @@ export default function TutorialWizard() {
                     className={cn(
                       "flex items-center gap-1 px-5 py-2 text-xs uppercase tracking-wider font-sans",
                       "bg-dw-accent text-paper rounded-sm",
-                      "hover:opacity-90 transition-opacity duration-200"
+                      "transition-colors hover:bg-dw-accent2"
                     )}
                   >
                     Done
@@ -267,7 +267,7 @@ export default function TutorialWizard() {
                     className={cn(
                       "flex items-center gap-1 px-5 py-2 text-xs uppercase tracking-wider font-sans",
                       "bg-dw-accent text-paper rounded-sm",
-                      "hover:opacity-90 transition-opacity duration-200"
+                      "transition-colors hover:bg-dw-accent2"
                     )}
                   >
                     Next

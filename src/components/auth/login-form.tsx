@@ -87,7 +87,7 @@ export function LoginForm() {
           className={cn(
             "w-full rounded bg-dw-accent px-4 py-2.5",
             "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-            "transition-opacity hover:opacity-90",
+            "transition-colors hover:bg-dw-accent2",
             "disabled:opacity-50 disabled:cursor-not-allowed"
           )}
         >

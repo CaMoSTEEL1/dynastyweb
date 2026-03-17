@@ -51,7 +51,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
         className={cn(
           "mt-8 inline-block rounded bg-dw-accent px-6 py-2.5",
           "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-          "transition-opacity hover:opacity-90"
+          "transition-colors hover:bg-dw-accent2"
         )}
       >
         Try Again

@@ -188,17 +188,17 @@ export default function FrontPage({
         <FrontPageSkeleton />
         <div className="mt-8 flex flex-col items-center gap-3">
           <p className="font-serif text-sm text-ink3">
-            Submit your first weekly game results to generate your media cycle.
+            Your game is over. The media universe is waiting. Run the Wire to generate your first story.
           </p>
           <Link
             href={`/${dynastyId}/submit`}
             className={cn(
               "rounded bg-dw-accent px-8 py-3",
               "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90"
+              "transition-colors hover:bg-dw-accent2"
             )}
           >
-            File Weekly Report
+            Run the Wire
           </Link>
         </div>
       </div>
@@ -232,10 +232,10 @@ export default function FrontPage({
             className={cn(
               "rounded bg-dw-accent px-6 py-2",
               "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90"
+              "transition-colors hover:bg-dw-accent2"
             )}
           >
-            Advance Week
+            File This Week
           </Link>
         )}
       </div>
@@ -247,16 +247,23 @@ export default function FrontPage({
       )}
 
       {scoreCard && !scoreCard.error && (
-        <ScoreCard
-          homeTeam={scoreCard.homeAway === "home" ? schoolName : scoreCard.opponent}
-          awayTeam={scoreCard.homeAway === "away" ? schoolName : scoreCard.opponent}
-          homeScore={scoreCard.homeAway === "home" ? scoreCard.userScore : scoreCard.opponentScore}
-          awayScore={scoreCard.homeAway === "away" ? scoreCard.userScore : scoreCard.opponentScore}
-          homeRank={scoreCard.homeAway === "home" ? undefined : scoreCard.opponentRanking ?? undefined}
-          awayRank={scoreCard.homeAway === "away" ? undefined : scoreCard.opponentRanking ?? undefined}
-          week={`Week ${scoreCard.week}`}
-          result={scoreCard.result}
-        />
+        <div className="space-y-0">
+          {/* Emotional result stripe — green for W, crimson for L */}
+          <div className={cn(
+            "h-0.5 w-full rounded-t",
+            scoreCard.result === "W" ? "bg-dw-green" : "bg-dw-accent"
+          )} />
+          <ScoreCard
+            homeTeam={scoreCard.homeAway === "home" ? schoolName : scoreCard.opponent}
+            awayTeam={scoreCard.homeAway === "away" ? schoolName : scoreCard.opponent}
+            homeScore={scoreCard.homeAway === "home" ? scoreCard.userScore : scoreCard.opponentScore}
+            awayScore={scoreCard.homeAway === "away" ? scoreCard.userScore : scoreCard.opponentScore}
+            homeRank={scoreCard.homeAway === "home" ? undefined : scoreCard.opponentRanking ?? undefined}
+            awayRank={scoreCard.homeAway === "away" ? undefined : scoreCard.opponentRanking ?? undefined}
+            week={`Week ${scoreCard.week}`}
+            result={scoreCard.result}
+          />
+        </div>
       )}
 
       {statStripData.length > 0 && <StatStrip stats={statStripData} />}
@@ -272,11 +279,28 @@ export default function FrontPage({
       />
 
       {isStreaming && (
-        <div className="flex items-center justify-center gap-2 py-4">
-          <div className="h-2 w-2 rounded-full bg-dw-accent animate-pulse" />
-          <p className="font-sans text-xs text-ink3 uppercase tracking-wide">
-            Loading more content...
+        <div className="flex items-center justify-center gap-3 py-6 border-t border-dw-border">
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-dw-accent animate-pulse"
+                style={{ animationDelay: `${i * 150}ms` }}
+              />
+            ))}
+          </div>
+          <p className="font-headline text-xs uppercase tracking-widest text-ink3">
+            The Wire is running your story
           </p>
+          <div className="flex gap-1">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="h-1.5 w-1.5 rounded-full bg-dw-accent animate-pulse"
+                style={{ animationDelay: `${(i + 3) * 150}ms` }}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

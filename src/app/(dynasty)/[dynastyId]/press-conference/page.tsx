@@ -393,7 +393,7 @@ export default function PressConferencePage({
   if (loading) {
     return (
       <div>
-        <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" />
+        <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" variant="press-conference" />
         <div className="mt-8 flex items-center justify-center rounded border border-dw-border bg-paper2 px-6 py-12">
           <div className="flex items-center gap-3">
             <div className="h-2 w-2 animate-pulse rounded-full bg-dw-accent" />
@@ -409,7 +409,7 @@ export default function PressConferencePage({
   if (!context || questions.length === 0) {
     return (
       <div>
-        <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" />
+        <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" variant="press-conference" />
         <div className="mt-8 rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
           <p className="font-serif text-ink2">
             The media room is empty &mdash; for now. After your next game, reporters
@@ -463,7 +463,7 @@ export default function PressConferencePage({
 
   return (
     <div>
-      <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" />
+      <SectionHeader title="PRESS CONFERENCE" subtitle="Step to the podium" variant="press-conference" />
 
       <div className="mt-8">
         {status === "setup" && (

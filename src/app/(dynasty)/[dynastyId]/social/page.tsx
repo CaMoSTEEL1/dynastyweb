@@ -214,6 +214,7 @@ export default function SocialPage() {
       <SectionHeader
         title="THE WIRE"
         subtitle="What they're saying across the internet"
+        variant="social"
       />
 
       <div className="mt-2 mb-4 flex items-center gap-2">

@@ -351,7 +351,7 @@ export default function WeeklyForm({
           className={cn(
             "rounded bg-dw-accent px-8 py-2.5",
             "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-            "transition-opacity hover:opacity-90",
+            "transition-colors hover:bg-dw-accent2",
             "disabled:cursor-not-allowed disabled:opacity-50"
           )}
         >

@@ -180,7 +180,7 @@ export default function NewSeasonFlow({ onCancel }: { onCancel: () => void }) {
             className={cn(
               "flex flex-1 items-center justify-center gap-1.5 rounded bg-dw-accent px-4 py-2.5",
               "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90"
+              "transition-colors hover:bg-dw-accent2"
             )}
           >
             Continue
@@ -242,7 +242,7 @@ export default function NewSeasonFlow({ onCancel }: { onCancel: () => void }) {
             className={cn(
               "flex-1 rounded bg-dw-accent px-4 py-2.5",
               "font-sans text-xs font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90",
+              "transition-colors hover:bg-dw-accent2",
               "disabled:cursor-not-allowed disabled:opacity-40"
             )}
           >

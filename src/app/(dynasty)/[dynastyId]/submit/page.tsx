@@ -66,8 +66,8 @@ export default async function SubmitPage({
       />
       <p className="mb-8 font-serif text-sm italic text-ink2">
         {isFirstWeek
-          ? "Welcome, Coach. Upload a screenshot of your first game result, or tell us what happened. Your media universe begins now."
-          : "Upload a screenshot from your game, or just tell us what happened. We\u2019ll handle the rest."}
+          ? "Your dynasty starts here. Drop in a screenshot or tell us the score — the media universe begins the moment you file."
+          : "Your game is over. Now the media universe catches up. Drop in the tape and The Wire will handle the rest."}
       </p>
       <InputHub
         dynastyId={dynastyId}

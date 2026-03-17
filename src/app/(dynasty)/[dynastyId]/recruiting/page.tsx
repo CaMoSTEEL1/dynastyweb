@@ -77,6 +77,7 @@ export default function RecruitingPage({ params }: RecruitingPageProps) {
         <SectionHeader
           title="RECRUITING"
           subtitle="Building the next generation"
+          variant="recruiting"
         />
         <div className="mt-8 rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
           <p className="font-serif italic text-ink3">
@@ -93,6 +94,7 @@ export default function RecruitingPage({ params }: RecruitingPageProps) {
         <SectionHeader
           title="RECRUITING"
           subtitle="Building the next generation"
+          variant="recruiting"
         />
         <div className="mt-8 rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
           <p className="font-serif text-dw-red">

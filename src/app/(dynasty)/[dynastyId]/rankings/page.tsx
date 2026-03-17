@@ -6,6 +6,7 @@ export default function RankingsPage() {
       <SectionHeader
         title="RANKINGS"
         subtitle="Where you stand in the national conversation"
+        variant="rankings"
       />
       <div className="mt-8 rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
         <p className="font-serif text-ink2">

@@ -535,7 +535,7 @@ export default function ScreenshotUpload({
               className={cn(
                 "ml-auto flex-1 rounded bg-dw-accent px-4 py-2.5",
                 "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-                "transition-opacity hover:opacity-90"
+                "transition-colors hover:bg-dw-accent2"
               )}
             >
               Extract from {pendingCount} Screenshot

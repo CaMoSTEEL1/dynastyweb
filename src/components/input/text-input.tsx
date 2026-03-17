@@ -163,7 +163,7 @@ export default function TextInput({
           className={cn(
             "flex w-full items-center justify-center gap-2 rounded bg-dw-accent px-4 py-2.5",
             "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-            "transition-opacity hover:opacity-90",
+            "transition-colors hover:bg-dw-accent2",
             "disabled:cursor-not-allowed disabled:opacity-40"
           )}
         >

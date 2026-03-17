@@ -69,7 +69,7 @@ export default function Paywall({ feature, children }: PaywallProps) {
             className={cn(
               "mt-6 inline-block rounded bg-dw-accent px-6 py-2.5",
               "font-sans text-sm font-semibold uppercase tracking-wider text-white",
-              "transition-opacity hover:opacity-90"
+              "transition-colors hover:bg-dw-accent2"
             )}
           >
             Upgrade to Premium
