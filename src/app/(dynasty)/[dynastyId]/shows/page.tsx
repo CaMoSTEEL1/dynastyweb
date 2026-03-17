@@ -260,7 +260,12 @@ export default function ShowsPage({
           subtitle="Broadcast coverage of your dynasty"
         />
         <div className="mt-6">
-          <TranscriptViewer transcript={activeTranscript} onBack={handleBack} />
+          <TranscriptViewer
+            transcript={activeTranscript}
+            onBack={handleBack}
+            submissionId={latestSubmissionId ?? undefined}
+            dynastyId={dynastyId}
+          />
         </div>
       </div>
     );

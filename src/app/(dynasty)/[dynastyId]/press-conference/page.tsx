@@ -14,6 +14,7 @@ import type {
   PressConfSession,
 } from "@/lib/ai/press-conference-types";
 import { cn } from "@/lib/utils";
+import { ReporterVoiceButton } from "@/components/audio/reporter-voice-button";
 
 interface SessionContext {
   school: string;
@@ -477,17 +478,31 @@ export default function PressConferencePage({
         )}
 
         {status === "in_progress" && currentQuestion && (
-          <QuestionDisplay
-            question={currentQuestion}
-            questionIndex={currentQuestionIndex}
-            totalQuestions={questions.length}
-            responseOptions={isFollowUp ? followUpOptions : currentOptions}
-            isFollowUp={isFollowUp}
-            onAnswer={handleAnswer}
-            onNextQuestion={handleNextQuestion}
-            showNextButton={showNextButton}
-            isSubmitting={isSubmitting}
-          />
+          <div>
+            {/* Reporter voice — plays the question aloud */}
+            <div className="mb-3 flex items-center gap-2">
+              <span className="font-sans text-xs text-ink3">
+                {currentQuestion.reporterName}
+                {currentQuestion.outlet ? ` · ${currentQuestion.outlet}` : ""}
+              </span>
+              <ReporterVoiceButton
+                key={currentQuestion.question}
+                questionText={currentQuestion.question}
+                reporterName={currentQuestion.reporterName}
+              />
+            </div>
+            <QuestionDisplay
+              question={currentQuestion}
+              questionIndex={currentQuestionIndex}
+              totalQuestions={questions.length}
+              responseOptions={isFollowUp ? followUpOptions : currentOptions}
+              isFollowUp={isFollowUp}
+              onAnswer={handleAnswer}
+              onNextQuestion={handleNextQuestion}
+              showNextButton={showNextButton}
+              isSubmitting={isSubmitting}
+            />
+          </div>
         )}
 
         {status === "grading" && (
