@@ -202,22 +202,24 @@ export async function generateSocialPosts(
       '{"posts": [{"handle": "string", "displayName": "string", "type": "fan"|"rival"|"analyst"|"insider"|"reddit", "body": "string", "likes": number, "reposts": number}]}',
       "",
       `Posts should react to ${ctx.school}'s Week ${ctx.week} result.`,
-      "Include a diverse mix: at least 3 fan posts, 1 rival fan troll, 2 analysts, 1 insider, 1 reddit-style, and 2 funny/viral posts.",
+      "IMPORTANT: The type field MUST be one of exactly these 5 values: fan, rival, analyst, insider, reddit.",
+      "Include a diverse mix: at least 3 fan posts, 1 rival fan (use type 'rival'), 2 analysts, 1 insider, and 2 reddit posts (funny/viral energy should go into the 'reddit' type).",
       "",
       "Here are examples of the VOICE and ENERGY to aim for (adapt to this specific game, don't copy verbatim):",
       socialExampleBlock,
       "",
       "Key style notes for each type:",
-      "- FAN: Emotional, ALL CAPS energy, overreactions, heart-on-sleeve. Self-deprecating after losses, euphoric after wins.",
-      "- RIVAL/TROLL: Snarky, schadenfreude, 'scoreboard' energy, mocking. Reference the actual opponent.",
-      "- ANALYST: Film references, stats, scheme observations. Measured but with a clear take. Think ESPN or 247Sports voice.",
-      "- INSIDER: 'Sources tell me...' energy. Locker room mood, coaching staff reactions, recruiting implications.",
-      "- REDDIT: Self-deprecating humor, absurd comparisons, copypasta energy, therapy jokes.",
+      "- fan: Emotional, ALL CAPS energy, overreactions, heart-on-sleeve. Self-deprecating after losses, euphoric after wins.",
+      "- rival: Snarky, schadenfreude, 'scoreboard' energy, mocking. Reference the actual opponent.",
+      "- analyst: Film references, stats, scheme observations. Measured but with a clear take. Think ESPN or 247Sports voice.",
+      "- insider: 'Sources tell me...' energy. Locker room mood, coaching staff reactions, recruiting implications.",
+      "- reddit: Self-deprecating humor, absurd comparisons, copypasta energy, therapy jokes, funny/viral takes.",
       "",
       "IMPORTANT:",
       "- Use the ACTUAL score, opponent name, and game events from the context below",
-      "- Make handles feel real: @CFBTakesMachine, @BigGameBaker, @{school}Insider, etc.",
-      "- Vary engagement realistically: viral funny posts get 1000+ likes, niche analyst posts get 100-500",
+      `- Make handles feel real: @CFBTakesMachine, @BigGameBaker, @${ctx.school.replace(/\s/g, "")}Insider, etc.`,
+      "- Vary engagement realistically: high-energy fan posts get 500-2000 likes, analyst posts get 100-500",
+      "- The 'reposts' field is required (not retweets) — use a realistic number",
       "- NO HTML entities. Use plain text quotes and punctuation.",
       "",
       "Context:",
@@ -229,21 +231,23 @@ export async function generateSocialPosts(
 
     const validTypes = new Set(["fan", "rival", "analyst", "insider", "reddit"]);
 
-    if (
-      parsed &&
-      Array.isArray(parsed.posts) &&
-      parsed.posts.length >= 1 &&
-      parsed.posts.every(
-        (p) =>
-          typeof p.handle === "string" &&
-          typeof p.displayName === "string" &&
-          validTypes.has(p.type) &&
-          typeof p.body === "string" &&
-          typeof p.likes === "number" &&
-          typeof p.reposts === "number"
-      )
-    ) {
-      return parsed;
+    // Normalize posts: coerce invalid types and fill missing reposts rather than failing the whole batch
+    if (parsed && Array.isArray(parsed.posts) && parsed.posts.length >= 1) {
+      const normalized = parsed.posts
+        .filter((p) => typeof p.handle === "string" && typeof p.body === "string")
+        .map((p) => ({
+          handle: String(p.handle),
+          displayName: typeof p.displayName === "string" ? p.displayName : String(p.handle),
+          type: validTypes.has(p.type) ? p.type : "fan",
+          body: String(p.body),
+          likes: typeof p.likes === "number" ? p.likes : 0,
+          // Accept retweets as reposts fallback
+          reposts: typeof p.reposts === "number" ? p.reposts : typeof (p as Record<string, unknown>).retweets === "number" ? (p as Record<string, unknown>).retweets as number : 0,
+        })) as SocialPostsContent["posts"];
+
+      if (normalized.length >= 1) {
+        return { posts: normalized };
+      }
     }
 
     return {

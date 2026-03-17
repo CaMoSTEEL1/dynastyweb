@@ -53,7 +53,9 @@ export default function SocialPage() {
 
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [threadPost, setThreadPost] = useState<SocialPost | null>(null);
   const [visibleCount, setVisibleCount] = useState(0);
   const [sessionContext, setSessionContext] = useState<{
@@ -106,6 +108,7 @@ export default function SocialPage() {
         return;
       }
 
+      setSubmissionId(submission.id);
       setSessionContext({
         school: dynasty.school,
         coachName: dynasty.coach_name,
@@ -130,7 +133,7 @@ export default function SocialPage() {
       ) {
         // Check if the cached content was an error fallback
         if (socialContent.error) {
-          setError("Social content generation failed during your weekly report. Try submitting your weekly data again to regenerate.");
+          setError("Social feed generation failed. Click below to try again.");
         } else {
           const hydrated = socialContent.posts.map((p, i) => hydratePost(p, i));
           setPosts(hydrated);
@@ -147,6 +150,31 @@ export default function SocialPage() {
   useEffect(() => {
     void loadSocialData();
   }, [loadSocialData]);
+
+  const handleRegenerate = useCallback(async () => {
+    if (!submissionId) return;
+    setRegenerating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/social/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ submissionId, dynastyId }),
+      });
+      if (!res.ok) throw new Error("Regeneration failed");
+      const data = (await res.json()) as SocialPostsContent;
+      if (data.error || !Array.isArray(data.posts) || data.posts.length === 0) {
+        setError("Generation failed again. Please try once more.");
+      } else {
+        const hydrated = data.posts.map((p, i) => hydratePost(p, i));
+        setPosts(hydrated);
+      }
+    } catch {
+      setError("Could not reach the server. Please try again.");
+    } finally {
+      setRegenerating(false);
+    }
+  }, [submissionId, dynastyId]);
 
   const handlePostClick = useCallback((post: SocialPost) => {
     setThreadPost(post);
@@ -187,6 +215,16 @@ export default function SocialPage() {
         />
         <div className="mt-8 rounded border border-dw-red/30 bg-dw-red/10 px-6 py-12 text-center">
           <p className="font-serif text-dw-red">{error}</p>
+          {submissionId && (
+            <button
+              type="button"
+              onClick={() => void handleRegenerate()}
+              disabled={regenerating}
+              className="mt-4 rounded border border-dw-red/40 bg-dw-red/10 px-4 py-2 font-sans text-xs uppercase tracking-wider text-dw-red transition-colors hover:bg-dw-red/20 disabled:opacity-50"
+            >
+              {regenerating ? "Regenerating..." : "Regenerate Feed"}
+            </button>
+          )}
         </div>
       </div>
     );
