@@ -144,6 +144,13 @@ export async function POST(req: NextRequest) {
     const elevenlabs = new ElevenLabsClient({ apiKey });
     const adminClient = createAdminClient();
 
+    // Ensure the audio bucket exists (creates it on first use)
+    const { data: buckets } = await adminClient.storage.listBuckets();
+    const bucketExists = buckets?.some((b) => b.name === "audio");
+    if (!bucketExists) {
+      await adminClient.storage.createBucket("audio", { public: true });
+    }
+
     // Generate all segments with concurrency cap of 3
     const segments = await withConcurrency(
       speechLines,
