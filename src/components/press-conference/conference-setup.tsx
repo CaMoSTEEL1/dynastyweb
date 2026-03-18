@@ -34,6 +34,20 @@ export default function ConferenceSetup({
     {} as Record<string, number>
   );
 
+  const tenseCount = (toneBreakdown["hostile"] ?? 0) + (toneBreakdown["gotcha"] ?? 0);
+  const positiveCount = (toneBreakdown["friendly"] ?? 0) + (toneBreakdown["neutral"] ?? 0);
+
+  const mood =
+    tenseCount === 0
+      ? { label: "Celebratory", color: "text-dw-green" }
+      : tenseCount > positiveCount
+        ? { label: "Hostile", color: "text-dw-red" }
+        : tenseCount >= 2 && tenseCount === positiveCount
+          ? { label: "Tense", color: "text-dw-yellow" }
+          : positiveCount >= tenseCount * 2
+            ? { label: "Upbeat", color: "text-dw-green" }
+            : { label: "Business-like", color: "text-ink" };
+
   return (
     <div className="mx-auto max-w-2xl">
       <div className="rounded border border-dw-border bg-paper2 p-8">
@@ -65,21 +79,8 @@ export default function ConferenceSetup({
               </div>
               <div>
                 <span className="text-ink3">Expected mood:</span>{" "}
-                <span
-                  className={cn(
-                    "font-semibold",
-                    toneBreakdown["hostile"] || toneBreakdown["gotcha"]
-                      ? "text-dw-red"
-                      : toneBreakdown["friendly"]
-                        ? "text-dw-green"
-                        : "text-ink"
-                  )}
-                >
-                  {toneBreakdown["hostile"] || toneBreakdown["gotcha"]
-                    ? "Tense"
-                    : toneBreakdown["friendly"]
-                      ? "Friendly"
-                      : "Business-like"}
+                <span className={cn("font-semibold", mood.color)}>
+                  {mood.label}
                 </span>
               </div>
             </div>
