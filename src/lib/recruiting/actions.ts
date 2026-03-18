@@ -6,8 +6,6 @@ import { createClient } from "@/lib/supabase/server";
 import { mapRowToRecruit, STATUS_TRANSITIONS } from "./types";
 import type { Recruit, StorylineEntry } from "./types";
 
-const anthropic = new Anthropic();
-
 const addRecruitSchema = z.object({
   name: z
     .string()
@@ -21,7 +19,7 @@ export async function addRecruit(
   dynastyId: string,
   seasonId: string,
   formData: FormData
-): Promise<{ success: boolean; recruit?: Recruit; error?: string }> {
+): Promise<{ success: boolean; recruit?: Recruit; school?: string; error?: string }> {
   try {
     const raw = {
       name: formData.get("name"),
@@ -83,42 +81,9 @@ export async function addRecruit(
       };
     }
 
-    let backstory = "";
-    try {
-      const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
-        system:
-          "You are a college football recruiting insider. Write brief, vivid backstories for high school recruits. No JSON, just plain text. 2-3 sentences max.",
-        messages: [
-          {
-            role: "user",
-            content: `Write a brief backstory for ${name}, a ${stars}-star ${position} recruit who has been offered by ${dynasty.school}. Include a hint about their personality and what motivates them as a recruit. Keep it to 2-3 sentences.`,
-          },
-        ],
-      });
-
-      const textBlock = response.content.find(
-        (block) => block.type === "text"
-      );
-      backstory = textBlock?.type === "text" ? textBlock.text.trim() : "";
-    } catch {
-      backstory = `${name} is a ${stars}-star ${position} prospect with an offer from ${dynasty.school}. The recruiting trail awaits.`;
-    }
-
-    if (backstory) {
-      await supabase
-        .from("recruits")
-        .update({ backstory, updated_at: new Date().toISOString() })
-        .eq("id", insertedRow.id);
-    }
-
-    const recruit = mapRowToRecruit({
-      ...insertedRow,
-      backstory,
-    });
-
-    return { success: true, recruit };
+    const recruit = mapRowToRecruit(insertedRow as Record<string, unknown>);
+    // Backstory is generated async via /api/recruits/backstory after this returns
+    return { success: true, recruit, school: dynasty.school as string };
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "An unexpected error occurred";
@@ -187,6 +152,7 @@ export async function updateRecruitStatus(
     const coachName = dynastyData.coach_name as string;
 
     let storylineText = "";
+    const anthropic = new Anthropic();
     try {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
@@ -202,7 +168,7 @@ export async function updateRecruitStatus(
       });
 
       const textBlock = response.content.find(
-        (block) => block.type === "text"
+        (block: { type: string }) => block.type === "text"
       );
       storylineText =
         textBlock?.type === "text" ? textBlock.text.trim() : "";

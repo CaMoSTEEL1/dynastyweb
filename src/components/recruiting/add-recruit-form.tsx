@@ -41,10 +41,25 @@ export function AddRecruitForm({
 
     startTransition(async () => {
       const result = await addRecruit(dynastyId, seasonId, formData);
-      if (result.success) {
+      if (result.success && result.recruit) {
         resetForm();
         setIsOpen(false);
+        // Refresh board immediately — recruit appears without backstory
         onAdded();
+        // Generate backstory in background via dedicated route (avoids server action timeout)
+        if (result.school) {
+          void fetch("/api/recruits/backstory", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              recruitId: result.recruit.id,
+              name: result.recruit.name,
+              stars: result.recruit.stars,
+              position: result.recruit.position,
+              school: result.school,
+            }),
+          }).then(() => onAdded()); // Refresh again once backstory is ready
+        }
       } else {
         setError(result.error ?? "Failed to add recruit");
       }

@@ -155,6 +155,18 @@ export default function FrontPage({
     }
   }, [submissionId, dynastyId, fetchLatestContent]);
 
+  // After a fresh stream completes, auto-repair season state if it fell behind
+  // (can happen if an old submission dropped the connection before the state update)
+  useEffect(() => {
+    if (!isStreaming && submissionId && dynastyId && !streamError) {
+      void fetch("/api/weekly/repair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dynastyId }),
+      });
+    }
+  }, [isStreaming, submissionId, dynastyId, streamError]);
+
   const scoreCard = submissionId
     ? (streamContent.score_card as ScoreCardData | undefined) ?? null
     : cachedContent?.score_card ?? null;

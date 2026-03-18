@@ -138,6 +138,17 @@ export async function GET(
           prestige: dynasty.prestige as string,
         });
 
+        // Update season state BEFORE content generation so it's guaranteed
+        // to persist even if the connection drops during the AI calls
+        const updatedState = updateSeasonState(seasonState, rawInput);
+        await supabase
+          .from("seasons")
+          .update({
+            season_state: updatedState as unknown as Record<string, unknown>,
+            current_week: rawInput.week + 1,
+          })
+          .eq("id", season.id as string);
+
         // Mark submission as generating
         await supabase
           .from("weekly_submissions")
@@ -171,16 +182,6 @@ export async function GET(
           generateAndSend("recruiting_note", () => generateRecruitingNote(ctx)),
           generateAndSend("press_conf", () => generatePressConference(ctx)),
         ]);
-
-        // Update season state with this week's results
-        const updatedState = updateSeasonState(seasonState, rawInput);
-        await supabase
-          .from("seasons")
-          .update({
-            season_state: updatedState as unknown as Record<string, unknown>,
-            current_week: rawInput.week + 1,
-          })
-          .eq("id", season.id as string);
 
         // Mark submission as complete
         await supabase
