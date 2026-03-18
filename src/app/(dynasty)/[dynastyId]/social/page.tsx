@@ -2,20 +2,26 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { SectionHeader } from "@/components/ui/section-header";
 import { SocialFeed } from "@/components/social/social-feed";
 import { TrendingPanel } from "@/components/social/trending-panel";
 import { ThreadModal } from "@/components/social/thread-modal";
+import { SocialPostCard } from "@/components/social/social-post-card";
+import { CoachCompose } from "@/components/social/coach-compose";
+import type { CoachPostRow } from "@/components/social/coach-compose";
 import type { SocialPost } from "@/lib/social/types";
-import type { SocialPostsContent } from "@/lib/ai/generators";
+import type { SocialPostsContent, RecruitSocialPost } from "@/lib/ai/generators";
 
-const TIMESTAMPS = [
+type ActiveTab = "fan" | "coach" | "recruit";
+
+const FAN_TIMESTAMPS = [
   "1m ago", "2m ago", "3m ago", "5m ago", "7m ago", "10m ago",
   "14m ago", "18m ago", "22m ago", "28m ago", "34m ago", "40m ago",
 ];
 
-function hydratePost(
+function hydrateFanPost(
   raw: SocialPostsContent["posts"][number],
   index: number
 ): SocialPost {
@@ -27,10 +33,47 @@ function hydratePost(
     body: raw.body,
     likes: raw.likes,
     reposts: raw.reposts,
-    timestamp: TIMESTAMPS[index] ?? `${45 + index * 5}m ago`,
+    timestamp: FAN_TIMESTAMPS[index] ?? `${45 + index * 5}m ago`,
     verified: raw.type === "analyst" || raw.type === "insider",
     avatarInitial: raw.displayName.charAt(0).toUpperCase(),
   };
+}
+
+function hydrateCoachPost(row: CoachPostRow, coachName: string, handle: string): SocialPost {
+  return {
+    id: row.id,
+    handle,
+    displayName: coachName,
+    type: "coach",
+    body: row.body,
+    likes: row.likes,
+    reposts: row.reposts,
+    timestamp: new Date(row.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    verified: true,
+    avatarInitial: coachName.charAt(0).toUpperCase(),
+  };
+}
+
+function hydrateRecruitPost(post: RecruitSocialPost, index: number): SocialPost {
+  return {
+    id: `recruit_${Date.now()}_${index}`,
+    handle: post.handle,
+    displayName: post.displayName,
+    type: "recruit",
+    body: post.body,
+    likes: post.likes,
+    reposts: post.reposts,
+    timestamp: FAN_TIMESTAMPS[index] ?? `${45 + index * 5}m ago`,
+    verified: false,
+    avatarInitial: post.displayName.charAt(0).toUpperCase(),
+    stars: post.stars,
+    position: post.position,
+  };
+}
+
+function getCoachHandle(coachName: string): string {
+  const lastName = coachName.trim().split(" ").pop() ?? coachName;
+  return `@Coach${lastName}`;
 }
 
 interface DynastyRow {
@@ -43,6 +86,7 @@ interface SeasonRow {
 }
 
 interface SubmissionRow {
+  id: string;
   week: number;
   raw_input: Record<string, unknown>;
 }
@@ -51,6 +95,9 @@ export default function SocialPage() {
   const params = useParams<{ dynastyId: string }>();
   const dynastyId = params.dynastyId;
 
+  const [activeTab, setActiveTab] = useState<ActiveTab>("fan");
+
+  // Fan feed state
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [regenerating, setRegenerating] = useState(false);
@@ -63,6 +110,17 @@ export default function SocialPage() {
     coachName: string;
     week: number;
   } | null>(null);
+  const [seasonId, setSeasonId] = useState<string | null>(null);
+
+  // Coach feed state
+  const [coachPosts, setCoachPosts] = useState<SocialPost[]>([]);
+  const [coachLoaded, setCoachLoaded] = useState(false);
+  const [coachLoading, setCoachLoading] = useState(false);
+
+  // Recruit posts state
+  const [recruitPosts, setRecruitPosts] = useState<SocialPost[]>([]);
+  const [recruitLoaded, setRecruitLoaded] = useState(false);
+  const [recruitLoading, setRecruitLoading] = useState(false);
 
   const loadSocialData = useCallback(async () => {
     setLoading(true);
@@ -94,6 +152,8 @@ export default function SocialPage() {
         return;
       }
 
+      setSeasonId(season.id);
+
       const { data: submission } = await supabase
         .from("weekly_submissions")
         .select("id, week, raw_input")
@@ -101,7 +161,7 @@ export default function SocialPage() {
         .eq("status", "complete")
         .order("week", { ascending: false })
         .limit(1)
-        .single<SubmissionRow & { id: string }>();
+        .single<SubmissionRow>();
 
       if (!submission) {
         setLoading(false);
@@ -115,7 +175,7 @@ export default function SocialPage() {
         week: submission.week,
       });
 
-      // Load social posts from content_cache
+      // Load fan social posts from content_cache
       const { data: cachedRows } = await supabase
         .from("content_cache")
         .select("content")
@@ -131,11 +191,10 @@ export default function SocialPage() {
         Array.isArray(socialContent.posts) &&
         socialContent.posts.length > 0
       ) {
-        // Check if the cached content was an error fallback
         if (socialContent.error) {
           setError("Social feed generation failed. Click below to try again.");
         } else {
-          const hydrated = socialContent.posts.map((p, i) => hydratePost(p, i));
+          const hydrated = socialContent.posts.map((p, i) => hydrateFanPost(p, i));
           setPosts(hydrated);
         }
       }
@@ -147,9 +206,89 @@ export default function SocialPage() {
     }
   }, [dynastyId]);
 
+  const loadCoachPosts = useCallback(async () => {
+    if (coachLoaded || coachLoading || !seasonId || !sessionContext) return;
+    setCoachLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { data: rows } = await supabase
+        .from("coach_posts")
+        .select("id, body, likes, reposts, created_at, week")
+        .eq("dynasty_id", dynastyId)
+        .eq("season_id", seasonId)
+        .order("created_at", { ascending: false });
+
+      const handle = getCoachHandle(sessionContext.coachName);
+      const hydrated = (rows ?? []).map((row) =>
+        hydrateCoachPost(row as CoachPostRow, sessionContext.coachName, handle)
+      );
+      setCoachPosts(hydrated);
+      setCoachLoaded(true);
+    } catch (err) {
+      console.error("Failed to load coach posts:", err);
+    } finally {
+      setCoachLoading(false);
+    }
+  }, [coachLoaded, coachLoading, seasonId, sessionContext, dynastyId]);
+
+  const loadRecruitPosts = useCallback(async () => {
+    if (recruitLoaded || recruitLoading || !seasonId || !sessionContext) return;
+    setRecruitLoading(true);
+
+    try {
+      const supabase = createClient();
+
+      // Load from all completed submissions this season
+      const { data: submissionIds } = await supabase
+        .from("weekly_submissions")
+        .select("id")
+        .eq("season_id", seasonId)
+        .eq("status", "complete");
+
+      if (!submissionIds || submissionIds.length === 0) {
+        setRecruitLoaded(true);
+        setRecruitLoading(false);
+        return;
+      }
+
+      const ids = submissionIds.map((s: { id: string }) => s.id);
+
+      const { data: cacheRows } = await supabase
+        .from("content_cache")
+        .select("content")
+        .in("weekly_submission_id", ids)
+        .eq("content_type", "recruit_social_posts");
+
+      const allPosts: SocialPost[] = [];
+      let idx = 0;
+      for (const row of cacheRows ?? []) {
+        const content = row.content as { posts?: RecruitSocialPost[] };
+        if (Array.isArray(content.posts)) {
+          for (const post of content.posts) {
+            allPosts.push(hydrateRecruitPost(post, idx++));
+          }
+        }
+      }
+
+      setRecruitPosts(allPosts);
+      setRecruitLoaded(true);
+    } catch (err) {
+      console.error("Failed to load recruit posts:", err);
+    } finally {
+      setRecruitLoading(false);
+    }
+  }, [recruitLoaded, recruitLoading, seasonId, sessionContext]);
+
   useEffect(() => {
     void loadSocialData();
   }, [loadSocialData]);
+
+  // Load tab data lazily when switching tabs
+  useEffect(() => {
+    if (activeTab === "coach") void loadCoachPosts();
+    if (activeTab === "recruit") void loadRecruitPosts();
+  }, [activeTab, loadCoachPosts, loadRecruitPosts]);
 
   const handleRegenerate = useCallback(async () => {
     if (!submissionId) return;
@@ -166,7 +305,7 @@ export default function SocialPage() {
       if (data.error || !Array.isArray(data.posts) || data.posts.length === 0) {
         setError("Generation failed again. Please try once more.");
       } else {
-        const hydrated = data.posts.map((p, i) => hydratePost(p, i));
+        const hydrated = data.posts.map((p, i) => hydrateFanPost(p, i));
         setPosts(hydrated);
       }
     } catch {
@@ -188,6 +327,13 @@ export default function SocialPage() {
     setVisibleCount(count);
   }, []);
 
+  const handleCoachPost = useCallback((post: CoachPostRow) => {
+    if (!sessionContext) return;
+    const handle = getCoachHandle(sessionContext.coachName);
+    const hydrated = hydrateCoachPost(post, sessionContext.coachName, handle);
+    setCoachPosts((prev) => [hydrated, ...prev]);
+  }, [sessionContext]);
+
   if (loading) {
     return (
       <div>
@@ -206,7 +352,7 @@ export default function SocialPage() {
     );
   }
 
-  if (error) {
+  if (error && activeTab === "fan") {
     return (
       <div>
         <SectionHeader
@@ -230,23 +376,6 @@ export default function SocialPage() {
     );
   }
 
-  if (posts.length === 0) {
-    return (
-      <div>
-        <SectionHeader
-          title="THE WIRE"
-          subtitle="What they're saying across the internet"
-        />
-        <div className="mt-8 rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
-          <p className="font-serif text-ink2">
-            The social feeds are warming up. Complete a week to see what fans,
-            rivals, and analysts have to say about your program.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <SectionHeader
@@ -255,30 +384,129 @@ export default function SocialPage() {
         variant="social"
       />
 
-      <div className="mt-2 mb-4 flex items-center gap-2">
-        <span className="font-sans text-xs text-ink3">
-          {visibleCount} of {posts.length} posts loaded
-        </span>
-        {visibleCount < posts.length && (
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-dw-green" />
-        )}
+      {/* Tab navigation */}
+      <div className="mt-4 mb-6 flex gap-1 rounded border border-dw-border bg-paper3 p-1">
+        {(["fan", "coach", "recruit"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "flex-1 rounded px-3 py-2 font-sans text-xs uppercase tracking-wider transition-colors",
+              activeTab === tab
+                ? "bg-paper text-ink shadow-sm"
+                : "text-ink3 hover:text-ink2"
+            )}
+          >
+            {tab === "fan" ? "Fan Feed" : tab === "coach" ? "Coach Feed" : "Recruits"}
+          </button>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        <div className="min-w-0 flex-1">
-          <SocialFeed
-            posts={posts}
-            onPostClick={handlePostClick}
-            onVisibleCountChange={handleVisibleCountChange}
-          />
-        </div>
+      {/* Fan Feed */}
+      {activeTab === "fan" && (
+        <>
+          {posts.length === 0 ? (
+            <div className="rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
+              <p className="font-serif text-ink2">
+                The social feeds are warming up. Complete a week to see what fans,
+                rivals, and analysts have to say about your program.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 flex items-center gap-2">
+                <span className="font-sans text-xs text-ink3">
+                  {visibleCount} of {posts.length} posts loaded
+                </span>
+                {visibleCount < posts.length && (
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-dw-green" />
+                )}
+              </div>
 
-        <div className="w-full shrink-0 lg:w-64">
-          <div className="sticky top-24">
-            <TrendingPanel posts={posts} visibleCount={visibleCount} />
-          </div>
+              <div className="flex flex-col gap-6 lg:flex-row">
+                <div className="min-w-0 flex-1">
+                  <SocialFeed
+                    posts={posts}
+                    onPostClick={handlePostClick}
+                    onVisibleCountChange={handleVisibleCountChange}
+                  />
+                </div>
+
+                <div className="w-full shrink-0 lg:w-64">
+                  <div className="sticky top-24">
+                    <TrendingPanel posts={posts} visibleCount={visibleCount} />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Coach Feed */}
+      {activeTab === "coach" && (
+        <div className="space-y-4">
+          {sessionContext && seasonId && (
+            <CoachCompose
+              coachName={sessionContext.coachName}
+              dynastyId={dynastyId}
+              seasonId={seasonId}
+              week={sessionContext.week}
+              onPost={handleCoachPost}
+            />
+          )}
+
+          {coachLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex gap-1.5">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:200ms]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:400ms]" />
+              </div>
+            </div>
+          )}
+
+          {!coachLoading && coachPosts.length === 0 && (
+            <div className="rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
+              <p className="font-serif text-ink2">
+                Your coach feed is empty. Share what&apos;s on your mind above.
+              </p>
+            </div>
+          )}
+
+          {coachPosts.map((post, i) => (
+            <SocialPostCard key={post.id} post={post} delay={i * 0.05} />
+          ))}
         </div>
-      </div>
+      )}
+
+      {/* Recruits Feed */}
+      {activeTab === "recruit" && (
+        <div className="space-y-4">
+          {recruitLoading && (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex gap-1.5">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:200ms]" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-dw-accent [animation-delay:400ms]" />
+              </div>
+            </div>
+          )}
+
+          {!recruitLoading && recruitPosts.length === 0 && (
+            <div className="rounded border border-dw-border bg-paper2 px-6 py-12 text-center">
+              <p className="font-serif text-ink2">
+                No recruit posts yet. Submit a week with recruit activity (offers, commits,
+                decommits) to see posts from prospects.
+              </p>
+            </div>
+          )}
+
+          {recruitPosts.map((post, i) => (
+            <SocialPostCard key={post.id} post={post} delay={i * 0.05} />
+          ))}
+        </div>
+      )}
 
       <ThreadModal
         post={threadPost}

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { PromptContext } from "./context-builder";
+import type { RecruitUpdate } from "@/lib/state/schema";
 import { PRESS_CONFERENCE_DB } from "@/lib/data/press-conference-db";
 import { SOCIAL_MEDIA_DB } from "@/lib/data/social-media-db";
 
@@ -52,6 +53,22 @@ export type PressConfContent = {
     question: string;
     tone: "friendly" | "neutral" | "hostile" | "gotcha";
   }>;
+  error?: boolean;
+};
+
+export type RecruitSocialPost = {
+  handle: string;
+  displayName: string;
+  body: string;
+  likes: number;
+  reposts: number;
+  position: string;
+  stars: number;
+  recruitName: string;
+};
+
+export type RecruitSocialPostsContent = {
+  posts: RecruitSocialPost[];
   error?: boolean;
 };
 
@@ -455,5 +472,72 @@ export async function generatePressConference(
       ],
       error: true,
     };
+  }
+}
+
+export async function generateRecruitSocialPosts(
+  updates: RecruitUpdate[],
+  ctx: PromptContext
+): Promise<RecruitSocialPostsContent> {
+  if (updates.length === 0) return { posts: [] };
+
+  try {
+    const updateLines = updates
+      .map((u) => `- ${u.action.toUpperCase()}: ${u.name} (${u.stars}★ ${u.position})`)
+      .join("\n");
+
+    const prompt = [
+      "Generate 1-2 social media posts FROM THE RECRUITS' PERSPECTIVES as JSON with this exact schema:",
+      '{"posts": [{"handle": "string", "displayName": "string", "body": "string", "likes": number, "reposts": number, "position": "string", "stars": number, "recruitName": "string"}]}',
+      "",
+      "Each post should be in the recruit's authentic voice — Gen-Z energy, emoji-heavy, vague hype.",
+      "Handle format: @{FirstName}{LastName}_{Position}{GradYear} (e.g. @JordanEvans_QB25)",
+      "",
+      "Voice guidelines by action type:",
+      "- offer: Cryptic, blessed energy. 'Humbled and grateful 🙏🙏' — never names the school directly.",
+      "- commit: Official announcement. Hype, emojis, ALL CAPS moments. Clear and celebratory.",
+      "- decommit: Vague and mysterious. 'Need to re-evaluate everything. Trust the process 🙏'",
+      "- portal_loss: 'Time for a new chapter ✈️' or silent (return empty posts array for this action).",
+      "",
+      "Generate exactly 1 post per recruit update. For portal_loss, skip the recruit entirely.",
+      "Engagement: offer posts get 500-3000 likes, commit posts get 2000-10000 likes, decommit gets 1000-5000.",
+      "Reposts should be roughly 25-40% of likes.",
+      "",
+      `School context: ${ctx.school}. These recruits are associated with ${ctx.school}'s program.`,
+      "",
+      "Recruit updates to process:",
+      updateLines,
+    ].join("\n");
+
+    const raw = await callClaude(ctx.systemPrompt, prompt, 1000);
+    const parsed = parseJSON<RecruitSocialPostsContent>(raw);
+
+    if (parsed && Array.isArray(parsed.posts)) {
+      const valid = parsed.posts.filter(
+        (p) =>
+          typeof p.handle === "string" &&
+          typeof p.displayName === "string" &&
+          typeof p.body === "string" &&
+          typeof p.recruitName === "string"
+      );
+      if (valid.length >= 1) {
+        return {
+          posts: valid.map((p) => ({
+            handle: String(p.handle),
+            displayName: String(p.displayName),
+            body: String(p.body),
+            likes: typeof p.likes === "number" ? p.likes : 500,
+            reposts: typeof p.reposts === "number" ? p.reposts : 100,
+            position: typeof p.position === "string" ? p.position : "ATH",
+            stars: typeof p.stars === "number" ? p.stars : 3,
+            recruitName: String(p.recruitName),
+          })),
+        };
+      }
+    }
+
+    return { posts: [], error: true };
+  } catch {
+    return { posts: [], error: true };
   }
 }

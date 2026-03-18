@@ -24,7 +24,7 @@ interface ScreenshotUploadProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
-const MAX_FILES = 6;
+const MAX_FILES = 10;
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 
 const UPLOAD_TIPS = [

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { weeklyInputSchema } from "@/lib/weekly/validation";
 import { buildContext } from "@/lib/ai/context-builder";
@@ -9,6 +10,7 @@ import {
   generateRankingsTake,
   generateRecruitingNote,
   generatePressConference,
+  generateRecruitSocialPosts,
 } from "@/lib/ai/generators";
 import { updateNarrativeMemory } from "@/lib/ai/narrative-updater";
 import { getSeasonState } from "@/lib/state/season-service";
@@ -134,6 +136,25 @@ export async function POST(request: NextRequest) {
       .from("weekly_submissions")
       .update({ status: "complete", generated_at: new Date().toISOString() })
       .eq("id", submissionId);
+
+    // Fire-and-forget: generate recruit social posts if there are recruit updates
+    if (validatedInput.recruitUpdates.length > 0) {
+      generateRecruitSocialPosts(validatedInput.recruitUpdates, ctx)
+        .then(async (result) => {
+          if (result.posts.length > 0) {
+            const supa = await createClient();
+            await supa.from("content_cache").insert({
+              weekly_submission_id: submissionId,
+              content_type: "recruit_social_posts",
+              content: result,
+            });
+          }
+        })
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : "Unknown error";
+          console.error("Failed to generate recruit social posts:", msg);
+        });
+    }
 
     updateNarrativeMemory(narrativeMemory, state, ctx)
       .then(async (updatedMemory) => {

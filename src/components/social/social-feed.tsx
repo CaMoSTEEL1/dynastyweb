@@ -10,6 +10,8 @@ const TYPE_PRIORITY: Record<SocialPost["type"], number> = {
   analyst: 2,
   insider: 3,
   reddit: 4,
+  coach: 5,
+  recruit: 6,
 };
 
 interface SocialFeedProps {

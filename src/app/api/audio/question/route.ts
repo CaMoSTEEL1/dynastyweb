@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ElevenLabsClient } from "elevenlabs";
 import { createClient } from "@/lib/supabase/server";
-import { getReporterVoiceId, BROADCAST_SETTINGS, BROADCAST_MODEL } from "@/lib/audio/voices";
+import { getReporterVoiceIdAsync, BROADCAST_SETTINGS, BROADCAST_MODEL } from "@/lib/audio/voices";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const voiceId = getReporterVoiceId(reporterName);
+    const voiceId = await getReporterVoiceIdAsync(reporterName, apiKey);
     const elevenlabs = new ElevenLabsClient({ apiKey });
 
     const stream = await elevenlabs.textToSpeech.convert(voiceId, {

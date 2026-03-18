@@ -172,6 +172,26 @@ create policy "Users can insert their own content"
     where d.user_id = auth.uid()
   ));
 
+-- Coach posts table (coach social feed)
+create table public.coach_posts (
+  id uuid default uuid_generate_v4() primary key,
+  dynasty_id uuid references public.dynasties(id) on delete cascade not null,
+  season_id uuid references public.seasons(id) on delete cascade not null,
+  week integer not null,
+  body text not null,
+  likes integer not null default 0,
+  reposts integer not null default 0,
+  created_at timestamptz default now() not null
+);
+
+alter table public.coach_posts enable row level security;
+
+create policy "Users can manage their own coach posts"
+  on public.coach_posts for all
+  using (dynasty_id in (
+    select id from public.dynasties where user_id = auth.uid()
+  ));
+
 -- Subscriptions table
 create table public.subscriptions (
   id uuid default uuid_generate_v4() primary key,

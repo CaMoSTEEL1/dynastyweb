@@ -3,7 +3,7 @@ import { ElevenLabsClient } from "elevenlabs";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  buildPersonaVoiceMap,
+  buildPersonaVoiceMapAsync,
   BROADCAST_SETTINGS,
   BROADCAST_MODEL,
 } from "@/lib/audio/voices";
@@ -131,8 +131,8 @@ export async function POST(req: NextRequest) {
 
     const transcript = transcriptRow.content as ShowTranscript;
 
-    // Build voice map from personas
-    const voiceMap = buildPersonaVoiceMap(transcript.personas);
+    // Build voice map from personas (resolves named voices via ElevenLabs API)
+    const voiceMap = await buildPersonaVoiceMapAsync(transcript.personas, apiKey);
 
     // Filter to only speech lines (skip stage directions)
     const speechLines = transcript.dialogue.filter((line) => !line.isStageDirection);

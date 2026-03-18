@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import {
   STATUS_COLORS,
   STATUS_TRANSITIONS,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/recruiting/types";
 import type { Recruit, StorylineEntry } from "@/lib/recruiting/types";
 import { updateRecruitStatus, removeRecruit } from "@/lib/recruiting/actions";
+import type { RecruitSocialPost } from "@/lib/ai/generators";
 
 interface RecruitBoardProps {
   recruits: Recruit[];
@@ -101,11 +103,107 @@ function StorylineTimeline({ entries }: { entries: StorylineEntry[] }) {
   );
 }
 
+function RecruitSocialSection({
+  recruitName,
+  dynastyId,
+  seasonId,
+}: {
+  recruitName: string;
+  dynastyId: string;
+  seasonId: string;
+}) {
+  const [posts, setPosts] = useState<RecruitSocialPost[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (loaded) return;
+    const supabase = createClient();
+
+    void (async () => {
+      const { data: submissionIds } = await supabase
+        .from("weekly_submissions")
+        .select("id")
+        .eq("season_id", seasonId)
+        .eq("status", "complete");
+
+      if (!submissionIds || submissionIds.length === 0) {
+        setLoaded(true);
+        return;
+      }
+
+      const ids = submissionIds.map((s: { id: string }) => s.id);
+
+      const { data: cacheRows } = await supabase
+        .from("content_cache")
+        .select("content")
+        .in("weekly_submission_id", ids)
+        .eq("content_type", "recruit_social_posts");
+
+      const matched: RecruitSocialPost[] = [];
+      for (const row of cacheRows ?? []) {
+        const content = row.content as { posts?: RecruitSocialPost[] };
+        if (Array.isArray(content.posts)) {
+          for (const post of content.posts) {
+            if (post.recruitName === recruitName) {
+              matched.push(post);
+            }
+          }
+        }
+      }
+
+      // Show 2 most recent
+      setPosts(matched.slice(-2).reverse());
+      setLoaded(true);
+    })();
+  }, [recruitName, dynastyId, seasonId, loaded]);
+
+  if (!loaded) {
+    return (
+      <p className="font-serif text-xs italic text-ink3">Loading social posts...</p>
+    );
+  }
+
+  if (posts.length === 0) {
+    return (
+      <p className="font-serif text-xs italic text-ink3">
+        No social posts yet. Submit a week with recruit activity to generate posts.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {posts.map((post, i) => (
+        <div key={i} className="rounded border border-dw-border bg-paper p-3">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="font-sans text-xs font-bold text-dw-green">{post.displayName}</span>
+            <span className="font-sans text-xs text-ink3">{post.handle}</span>
+            {post.position && (
+              <span className="rounded bg-paper3 px-1.5 py-0.5 font-sans text-[10px] uppercase tracking-wide text-ink3">
+                {post.position}
+              </span>
+            )}
+          </div>
+          <p className="font-serif text-sm leading-relaxed text-ink2">{post.body}</p>
+          <div className="mt-1.5 flex gap-4">
+            <span className="font-sans text-xs text-ink3">♡ {post.likes.toLocaleString()}</span>
+            <span className="font-sans text-xs text-ink3">↻ {post.reposts.toLocaleString()}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RecruitRow({
   recruit,
+  dynastyId,
+  seasonId,
   onUpdate,
 }: {
   recruit: Recruit;
+  dynastyId: string;
+  seasonId: string;
   onUpdate: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -214,6 +312,17 @@ function RecruitRow({
               </h4>
               <StorylineTimeline entries={recruit.storylineHistory} />
             </div>
+          </div>
+
+          <div className="mt-4 border-t border-dw-border pt-4">
+            <h4 className="mb-2 font-headline text-xs uppercase tracking-wider text-ink3">
+              Social
+            </h4>
+            <RecruitSocialSection
+              recruitName={recruit.name}
+              dynastyId={dynastyId}
+              seasonId={seasonId}
+            />
           </div>
 
           <div className="mt-4 flex items-center gap-3 border-t border-dw-border pt-3">
@@ -327,6 +436,8 @@ export function RecruitBoard({
         <RecruitRow
           key={recruit.id}
           recruit={recruit}
+          dynastyId={dynastyId}
+          seasonId={seasonId}
           onUpdate={onUpdate}
         />
       ))}
