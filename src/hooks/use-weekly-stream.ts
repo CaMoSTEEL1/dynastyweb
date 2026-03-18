@@ -82,12 +82,16 @@ export function useWeeklyStream(
 
     es.onerror = () => {
       if (!mountedRef.current) return;
-
-      if (es.readyState === EventSource.CLOSED) {
-        setIsStreaming(false);
-      } else {
-        setError("Stream connection lost. Reconnecting...");
-      }
+      setIsStreaming(false);
+      es.close();
+      // Don't show an error if content already arrived — generation likely finished
+      setContent((prev) => {
+        const hasContent = Object.keys(prev).length > 0;
+        if (!hasContent) {
+          setError("Connection interrupted. Refresh the page to load your content.");
+        }
+        return prev;
+      });
     };
 
     return () => {

@@ -1,4 +1,8 @@
 import { NextRequest } from "next/server";
+
+// Allow up to 5 minutes — parallel generation still finishes in ~15s
+// but this prevents Vercel from cutting the connection on slower runs
+export const maxDuration = 300;
 import { createClient } from "@/lib/supabase/server";
 import { buildContext } from "@/lib/ai/context-builder";
 import {
@@ -140,22 +144,15 @@ export async function GET(
           .update({ status: "generating" })
           .eq("id", submissionId);
 
-        // Generate and stream content in sequence, caching as we go
-        const contentTypes = [
-          { type: "recap", generate: () => generateRecap(ctx) },
-          { type: "beat_takes", generate: () => generateBeatTakes(ctx) },
-          { type: "social_posts", generate: () => generateSocialPosts(ctx) },
-          { type: "rankings_take", generate: () => generateRankingsTake(ctx) },
-          { type: "recruiting_note", generate: () => generateRecruitingNote(ctx) },
-          { type: "press_conf", generate: () => generatePressConference(ctx) },
-        ] as const;
-
-        for (const { type, generate } of contentTypes) {
+        // Generate all content in parallel — each sends its SSE event + caches
+        // as soon as it finishes, so the fastest content appears first on screen
+        const generateAndSend = async (
+          type: string,
+          generate: () => Promise<unknown>
+        ) => {
           try {
             const content = await generate();
             send(type, content);
-
-            // Cache for future loads
             await supabase.from("content_cache").insert({
               weekly_submission_id: submissionId,
               content_type: type,
@@ -164,7 +161,16 @@ export async function GET(
           } catch {
             send(type, { error: true, message: `Failed to generate ${type}` });
           }
-        }
+        };
+
+        await Promise.all([
+          generateAndSend("recap", () => generateRecap(ctx)),
+          generateAndSend("beat_takes", () => generateBeatTakes(ctx)),
+          generateAndSend("social_posts", () => generateSocialPosts(ctx)),
+          generateAndSend("rankings_take", () => generateRankingsTake(ctx)),
+          generateAndSend("recruiting_note", () => generateRecruitingNote(ctx)),
+          generateAndSend("press_conf", () => generatePressConference(ctx)),
+        ]);
 
         // Update season state with this week's results
         const updatedState = updateSeasonState(seasonState, rawInput);
