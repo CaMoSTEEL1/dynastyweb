@@ -173,12 +173,19 @@ export default function InputHub({
 
   if (stage.phase === "review") {
     return (
-      <ConfidenceReview
-        result={stage.result}
-        week={currentWeek}
-        onConfirm={handleConfirm}
-        onReExtract={handleReExtract}
-      />
+      <div className="space-y-4">
+        {submitError && (
+          <div className="rounded border border-dw-red/30 bg-dw-red/10 px-4 py-3">
+            <p className="font-sans text-sm text-dw-red">{submitError}</p>
+          </div>
+        )}
+        <ConfidenceReview
+          result={stage.result}
+          week={currentWeek}
+          onConfirm={handleConfirm}
+          onReExtract={handleReExtract}
+        />
+      </div>
     );
   }
 

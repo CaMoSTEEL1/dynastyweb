@@ -2,13 +2,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { weeklyInputSchema, type WeeklyInputForm } from "./validation";
-import { advanceWeek } from "@/lib/state/season-service";
-import type { SeasonState } from "@/lib/state/schema";
 
 interface SubmitSuccess {
   success: true;
   submissionId: string;
-  newState: SeasonState;
 }
 
 interface SubmitFailure {
@@ -44,17 +41,17 @@ export async function submitWeeklyData(
     }
 
     // Get the current (active) season for the dynasty
-    const { data: season, error: seasonError } = await supabase
+    const { data: season } = await supabase
       .from("seasons")
       .select("id, dynasty_id, year, current_week, season_state")
       .eq("dynasty_id", dynastyId)
       .neq("current_week", -1)
       .order("year", { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (seasonError || !season) {
-      return { success: false, error: "No active season found" };
+    if (!season) {
+      return { success: false, error: "No active season found. Go to Settings to start a season." };
     }
 
     // Cost guard: max 20 submissions per season
@@ -93,13 +90,12 @@ export async function submitWeeklyData(
       };
     }
 
-    // Advance the season state
-    const newState = await advanceWeek(season.id, validatedInput);
-
+    // Season state advancement is handled by the stream route so it is
+    // guaranteed to persist (and only happens once, even if the connection
+    // to the stream is dropped — the repair route covers that case).
     return {
       success: true,
       submissionId: submission.id as string,
-      newState,
     };
   } catch (err) {
     const message =
