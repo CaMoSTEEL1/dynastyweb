@@ -17,6 +17,7 @@ interface RespondRequestBody {
 
 interface RespondResult {
   followUp: string | null;
+  followUpOptions: ResponseOption[] | null;
   nextOptions: ResponseOption[] | null;
 }
 
@@ -63,12 +64,20 @@ The coach (${sessionContext.coachName}) responded with a "${tone}" tone:
 "${userAnswer}"
 
 Evaluate this response and:
-1. Decide if a follow-up question is warranted (about 50% of the time). If yes, provide a sharp, realistic follow-up that a college football reporter would ask. If not, set followUp to null.
+1. Decide if a follow-up question is warranted (about 50% of the time). If yes, provide a sharp, realistic follow-up that a college football reporter would ask — it should directly react to the coach's specific answer above. Also generate 3-4 multiple choice response options for that follow-up, each with a different tone (honest, deflect, coachspeak, fiery). If no follow-up is warranted, set followUp and followUpOptions to null.
 2. ${nextQuestion ? `Generate 3-4 multiple choice response options for the NEXT question: "${nextQuestion}". Each option should have a different tone (honest, deflect, coachspeak, fiery). Make them sound like realistic coach responses.` : "There are no more questions, so set nextOptions to null."}
 
 Respond with this exact JSON structure:
 {
   "followUp": "follow-up question text" or null,
+  "followUpOptions": [
+    {
+      "id": "fu_1",
+      "label": "Short label (2-4 words)",
+      "tone": "honest" | "deflect" | "coachspeak" | "fiery",
+      "text": "Full response text the coach would say to the follow-up"
+    }
+  ] or null,
   "nextOptions": [
     {
       "id": "opt_1",

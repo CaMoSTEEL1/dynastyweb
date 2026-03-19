@@ -88,19 +88,53 @@ function buildTickerItems(
     items.push(`${school} in freefall — can Coach ${coachName} stop the bleeding?`);
   }
 
-  // Recruiting flavor
-  items.push(`Recruiting impact: ${school}'s ${record.wins}-${record.losses} record shaping the recruiting pitch.`);
-
+  // Recruiting flavor — school-specific
   if (state.biggestWin) {
-    items.push(`Signature win over ${state.biggestWin} continues to resonate on the trail.`);
+    items.push(`Signature win over ${state.biggestWin} paying dividends on the recruiting trail.`);
   }
-
   if (state.worstLoss) {
-    items.push(`Loss to ${state.worstLoss} still a talking point with recruits.`);
+    items.push(`Rival programs using ${school}'s loss to ${state.worstLoss} as a recruiting weapon.`);
   }
 
-  // Portal/transfer flavor
-  items.push(`Transfer portal buzz: ${conference} programs making moves for next season.`);
+  // CFB universe headlines — broad, varied, rotating pool
+  const universeItems = [
+    "SOURCES: Three Power Four programs quietly pursuing the same 5-star QB prospect.",
+    "Inside the portal: 30+ starters have entered since Monday. The reshuffling has begun.",
+    "Report: SEC program offering NIL packages north of $3M for elite transfer linemen.",
+    "Coaching carousel heating up — two ADs confirmed to be making calls this week.",
+    "CFP committee chairman: 'Strength of schedule will matter more than ever in final rankings.'",
+    "The 5-star who flipped last night: inside the midnight phone call that changed everything.",
+    "Big Ten defensive coordinator quietly emerging as top head coaching candidate nationwide.",
+    "BREAKING: High-profile OC leaving for head coaching role — buyout confirmed at $4.5M.",
+    "NIL collective arms race: which conferences are actually winning the money battle.",
+    "Sleeper program quietly assembling a portal class that has scouts buzzing.",
+    "Offensive line depth crisis spreading across the sport — who's most exposed?",
+    "Analyst: 'The team that wins the portal window wins the national title. Period.'",
+    "Five programs in serious trouble if their starting QB goes down. You know who they are.",
+    "The backup QB who's about to become the most recruited transfer in the country.",
+    "Behind the scenes: what coaches actually say about each other in recruiting visits.",
+    "AP voter admits: 'Eye test is beating box scores in our ballots right now.'",
+    "The most underrated 3-star in this class could be the steal of the decade.",
+    "Home field chaos: three venues with crowd noise issues that are getting flagged by officials.",
+    "Injury report watch: starting corners going down across the country — passing game about to explode.",
+    "This week's biggest mismatch: two programs with wildly different trajectories collide Saturday.",
+    `${conference} officiating crew under league review after controversial Week ${week} calls.`,
+    "Portal insider: 'The dam breaks after the regular season. Everyone's looking for an exit.'",
+    "The program no one is talking about that's quietly 3-deep at every skill position.",
+    "Behind the numbers: why yards per play matters more than total offense in the playoff era.",
+    "Defensive coordinator who's been turning down head coaching offers — for now.",
+    "RUMOR MILL: Star receiver's relationship with his OC described as 'complicated' by source.",
+    "Which current coordinators are playing for their jobs in the final month of the season?",
+    "Night game atmosphere rankings: the venues that actually terrify visiting teams.",
+    "The 4-star who didn't get a single offer from his home state. Now everyone wants him.",
+    "Stadium expansion projects: who's building, who's waiting, and who can't afford to.",
+  ];
+
+  // Pick 3-4 universe items deterministically based on week + record to give variety
+  const seed = (week * 7 + record.wins * 3 + record.losses * 11) % universeItems.length;
+  for (let i = 0; i < 4; i++) {
+    items.push(universeItems[(seed + i * 8) % universeItems.length]);
+  }
 
   return items;
 }

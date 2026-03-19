@@ -297,7 +297,13 @@ export async function POST(
       throw new Error("No text response from AI");
     }
 
-    const parsed: DialogueResponse = JSON.parse(textBlock.text);
+    // Strip markdown code fences if Claude wrapped the JSON
+    let jsonText = textBlock.text.trim();
+    if (jsonText.startsWith("```")) {
+      jsonText = jsonText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+
+    const parsed: DialogueResponse = JSON.parse(jsonText);
 
     const transcript: ShowTranscript = {
       showType: validShowType,

@@ -107,6 +107,7 @@ export default function PressConferencePage({
   const [currentFollowUp, setCurrentFollowUp] = useState<string | null>(null);
   const [currentOptions, setCurrentOptions] = useState<ResponseOption[] | null>(null);
   const [pendingNextOptions, setPendingNextOptions] = useState<ResponseOption[] | null>(null);
+  const [pendingFollowUpOptions, setPendingFollowUpOptions] = useState<ResponseOption[] | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showNextButton, setShowNextButton] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -166,6 +167,25 @@ export default function PressConferencePage({
         seasonId: season.id as string,
         dynastyId,
       });
+
+      // Check if this week's press conference is already completed
+      const { data: savedConf } = await supabase
+        .from("press_conferences")
+        .select("questions_answers, grade")
+        .eq("season_id", season.id as string)
+        .eq("week", week)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (savedConf?.grade) {
+        // Already completed — restore the finished state
+        setExchanges((savedConf.questions_answers as PressConfExchange[]) ?? []);
+        setGrade(savedConf.grade as PressConfGrade);
+        setStatus("complete");
+        setLoading(false);
+        return;
+      }
 
       // Try to load AI-generated press conference questions from content_cache
       const { data: cached } = await supabase
@@ -268,6 +288,7 @@ export default function PressConferencePage({
         if (res.ok) {
           const data = (await res.json()) as {
             followUp: string | null;
+            followUpOptions: ResponseOption[] | null;
             nextOptions: ResponseOption[] | null;
           };
 
@@ -280,6 +301,7 @@ export default function PressConferencePage({
             });
             setCurrentFollowUp(data.followUp);
             setIsFollowUp(true);
+            setPendingFollowUpOptions(data.followUpOptions);
             // Store next-question options for after the follow-up
             setPendingNextOptions(data.nextOptions);
             setIsSubmitting(false);
@@ -376,6 +398,7 @@ export default function PressConferencePage({
     setIsFollowUp(false);
     setCurrentFollowUp(null);
     setCurrentExchange(null);
+    setPendingFollowUpOptions(null);
 
     // Use pending options from the previous question's API response
     if (pendingNextOptions && pendingNextOptions.length > 0) {
@@ -435,7 +458,7 @@ export default function PressConferencePage({
       }
     : questions[currentQuestionIndex];
 
-  const followUpOptions: ResponseOption[] = [
+  const followUpOptions: ResponseOption[] = pendingFollowUpOptions ?? [
     {
       id: "fu_1",
       label: "Clarify",
