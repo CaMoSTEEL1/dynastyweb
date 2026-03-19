@@ -13,6 +13,7 @@ import {
   Award,
   Settings,
   HelpCircle,
+  UserCircle,
 } from "lucide-react";
 import { useSettings } from "@/components/settings/settings-context";
 import { useTutorial } from "@/components/tutorial/tutorial-context";
@@ -23,6 +24,7 @@ interface NavbarProps {
 
 const navItems = [
   { label: "Front Page", slug: "", icon: Newspaper },
+  { label: "Coach", slug: "coach", icon: UserCircle },
   { label: "Social", slug: "social", icon: MessageCircle },
   { label: "Press Conference", slug: "press-conference", icon: Mic },
   { label: "Recruiting", slug: "recruiting", icon: Users },

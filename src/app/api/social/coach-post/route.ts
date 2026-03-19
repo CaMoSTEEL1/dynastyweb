@@ -55,7 +55,8 @@ export async function POST(req: NextRequest) {
 
     if (insertError) {
       console.error("[coach-post] Insert error:", insertError.message);
-      return NextResponse.json({ error: "Failed to save post" }, { status: 500 });
+      // Surface the real DB error so missing-table issues are obvious
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
     return NextResponse.json(inserted);
