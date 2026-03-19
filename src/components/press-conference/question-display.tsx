@@ -366,7 +366,7 @@ export default function QuestionDisplay({
           )}
 
           {mode === "voice" && (
-            <div className="flex flex-col items-center gap-4 rounded border border-dw-border bg-paper3 p-8">
+            <div className="flex flex-col items-center gap-4 rounded border border-dw-border bg-paper3 p-4 sm:p-8">
 
               {voiceState === "idle" && (
                 <>
@@ -491,7 +491,7 @@ export default function QuestionDisplay({
           <button
             onClick={onNextQuestion}
             className={cn(
-              "rounded border border-dw-accent bg-dw-accent px-6 py-2",
+              "w-full sm:w-auto rounded border border-dw-accent bg-dw-accent px-6 py-3 sm:py-2",
               "font-sans text-xs uppercase tracking-wider text-paper",
               "transition-colors hover:bg-dw-accent2 hover:border-dw-accent2"
             )}

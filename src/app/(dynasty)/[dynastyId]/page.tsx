@@ -86,22 +86,23 @@ export default function FrontPage({
         return;
       }
 
-      const { data: season } = await supabase
-        .from("seasons")
-        .select("dynasty_id")
-        .eq("id", latestSub.season_id as string)
-        .single();
+      const [{ data: season }, { data: cached }] = await Promise.all([
+        supabase
+          .from("seasons")
+          .select("dynasty_id")
+          .eq("id", latestSub.season_id as string)
+          .single(),
+        supabase
+          .from("content_cache")
+          .select("content_type, content")
+          .eq("weekly_submission_id", latestSub.id as string),
+      ]);
 
       if (!season || (season.dynasty_id as string) !== dynId) {
         setHasNoContent(true);
         setLoadingCached(false);
         return;
       }
-
-      const { data: cached } = await supabase
-        .from("content_cache")
-        .select("content_type, content")
-        .eq("weekly_submission_id", latestSub.id as string);
 
       if (!cached || cached.length === 0) {
         setHasNoContent(true);

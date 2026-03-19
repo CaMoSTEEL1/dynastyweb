@@ -424,7 +424,7 @@ export default function SocialPage() {
               </div>
 
               <div className="flex flex-col gap-6 lg:flex-row">
-                <div className="min-w-0 flex-1">
+                <div className="order-2 lg:order-1 min-w-0 flex-1">
                   <SocialFeed
                     posts={posts}
                     onPostClick={handlePostClick}
@@ -432,8 +432,8 @@ export default function SocialPage() {
                   />
                 </div>
 
-                <div className="w-full shrink-0 lg:w-64">
-                  <div className="sticky top-24">
+                <div className="order-1 lg:order-2 w-full shrink-0 lg:w-64">
+                  <div className="lg:sticky lg:top-24">
                     <TrendingPanel posts={posts} visibleCount={visibleCount} />
                   </div>
                 </div>

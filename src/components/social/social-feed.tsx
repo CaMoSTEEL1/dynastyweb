@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { SocialPost } from "@/lib/social/types";
 import { SocialPostCard } from "./social-post-card";
 
@@ -23,16 +23,10 @@ interface SocialFeedProps {
 export function SocialFeed({ posts, onPostClick, onVisibleCountChange }: SocialFeedProps) {
   const [visibleCount, setVisibleCount] = useState(0);
 
-  const sortedPosts = [...posts].sort(
-    (a, b) => TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type]
+  const sortedPosts = useMemo(
+    () => [...posts].sort((a, b) => TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type]),
+    [posts]
   );
-
-  const reveal = useCallback(() => {
-    setVisibleCount((prev) => {
-      const next = prev + 1;
-      return next > sortedPosts.length ? sortedPosts.length : next;
-    });
-  }, [sortedPosts.length]);
 
   useEffect(() => {
     if (sortedPosts.length === 0) return;
@@ -55,7 +49,7 @@ export function SocialFeed({ posts, onPostClick, onVisibleCountChange }: SocialF
       clearTimeout(firstTimer);
       clearInterval(interval);
     };
-  }, [sortedPosts.length, reveal]);
+  }, [sortedPosts.length]);
 
   useEffect(() => {
     onVisibleCountChange?.(visibleCount);

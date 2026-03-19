@@ -50,7 +50,7 @@ export default function ConferenceSetup({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <div className="rounded border border-dw-border bg-paper2 p-8">
+      <div className="rounded border border-dw-border bg-paper2 p-4 sm:p-8">
         <div className="mb-6 text-center">
           <p className="font-sans text-xs uppercase tracking-widest text-ink3">
             Week {week} Postgame
@@ -72,7 +72,7 @@ export default function ConferenceSetup({
             <p className="mb-2 font-sans text-xs font-semibold uppercase tracking-wider text-ink3">
               Media Room Details
             </p>
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
                 <span className="text-ink3">Reporters present:</span>{" "}
                 <span className="font-semibold text-ink">{reporterCount}</span>

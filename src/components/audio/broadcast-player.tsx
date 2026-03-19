@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, memo } from "react";
 import { Play, Pause, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,7 +22,7 @@ interface BroadcastPlayerProps {
 }
 
 // CSS waveform bars — purely decorative, no real audio data needed
-function WaveformBars({ active }: { active: boolean }) {
+const WaveformBars = memo(function WaveformBars({ active }: { active: boolean }) {
   return (
     <div className="flex items-end gap-[3px] h-4">
       {[0.4, 0.7, 1, 0.6, 0.85, 0.5, 0.9, 0.65, 0.45, 0.75].map((height, i) => (
@@ -41,7 +41,7 @@ function WaveformBars({ active }: { active: boolean }) {
       ))}
     </div>
   );
-}
+});
 
 export function BroadcastPlayer({
   submissionId,
