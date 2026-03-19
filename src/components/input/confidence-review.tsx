@@ -149,7 +149,7 @@ function initEditableState(result: ExtractionResult): EditableState {
     gameVibe: result.gameVibe.value || "dominant_win",
     notableMoment: result.notableMoment.value || "",
     statLeaders: result.statLeaders.value.length > 0
-      ? result.statLeaders.value
+      ? result.statLeaders.value.slice(0, 3)
       : [],
     recruitUpdates: result.recruitUpdates.value.length > 0
       ? result.recruitUpdates.value.map((r) => ({
@@ -314,12 +314,12 @@ export default function ConfidenceReview({
       opponentScore: oppScoreNum,
       gameVibe: resolvedVibe as WeeklyInputForm["gameVibe"],
       notableMoment: editable.notableMoment.trim() || null,
-      statLeaders: editable.statLeaders.filter(
-        (sl) => sl.name.trim() && sl.position.trim() && sl.stat.trim()
-      ),
-      recruitUpdates: editable.recruitUpdates.filter(
-        (ru) => ru.name.trim() && ru.position.trim()
-      ),
+      statLeaders: editable.statLeaders
+        .filter((sl) => sl.name.trim() && sl.position.trim() && sl.stat.trim())
+        .slice(0, 3),
+      recruitUpdates: editable.recruitUpdates
+        .filter((ru) => ru.name.trim() && ru.position.trim())
+        .slice(0, 5),
       newRanking: editable.newRanking ? Number(editable.newRanking) : null,
     };
 
