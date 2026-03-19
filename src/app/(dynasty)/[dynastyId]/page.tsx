@@ -78,7 +78,7 @@ export default function FrontPage({
         .eq("status", "complete")
         .order("submitted_at", { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (!latestSub) {
         setHasNoContent(true);
@@ -91,7 +91,7 @@ export default function FrontPage({
           .from("seasons")
           .select("dynasty_id")
           .eq("id", latestSub.season_id as string)
-          .single(),
+          .maybeSingle(),
         supabase
           .from("content_cache")
           .select("content_type, content")
