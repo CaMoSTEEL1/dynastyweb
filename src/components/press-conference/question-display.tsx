@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type MouseEvent } from "react";
 import { cn } from "@/lib/utils";
 import type { PressConfQuestion, ResponseOption } from "@/lib/ai/press-conference-types";
 
@@ -19,7 +19,9 @@ interface QuestionDisplayProps {
   isSubmitting: boolean;
 }
 
-function useTypingAnimation(text: string, speed: number = 30): { displayText: string; isComplete: boolean } {
+// Variable-speed typewriter — punctuation creates natural speech rhythm
+// Pauses after sentence-ending punctuation, accelerates on spaces
+function useTypingAnimation(text: string): { displayText: string; isComplete: boolean } {
   const [charIndex, setCharIndex] = useState(0);
 
   useEffect(() => {
@@ -29,12 +31,22 @@ function useTypingAnimation(text: string, speed: number = 30): { displayText: st
   useEffect(() => {
     if (charIndex >= text.length) return;
 
+    const prevChar = charIndex > 0 ? text[charIndex - 1] : "";
+    const curChar = text[charIndex];
+    let delay = 26;
+
+    if (prevChar === "." || prevChar === "?" || prevChar === "!") delay = 340;
+    else if (prevChar === ",") delay = 150;
+    else if (prevChar === ";" || prevChar === ":") delay = 190;
+    else if (prevChar === "—" || prevChar === "–") delay = 220;
+    else if (curChar === " ") delay = 12;
+
     const timer = setTimeout(() => {
       setCharIndex((prev) => prev + 1);
-    }, speed);
+    }, delay);
 
     return () => clearTimeout(timer);
-  }, [charIndex, text, speed]);
+  }, [charIndex, text]);
 
   return {
     displayText: text.slice(0, charIndex),
@@ -76,11 +88,45 @@ const TONE_LABELS: Record<string, string> = {
   fiery: "Fiery",
 };
 
-// CSS keyframe for waveform bars injected once
-const WAVEFORM_STYLE = `
+// All CSS keyframes in one injection point
+const PRESS_CONF_STYLES = `
 @keyframes waveform {
   0%, 100% { transform: scaleY(0.25); }
-  50% { transform: scaleY(1); }
+  50%       { transform: scaleY(1); }
+}
+
+/* Spring overshoot entry for response cards */
+@keyframes pc-card-spring-in {
+  0%   { opacity: 0; transform: translateY(16px) scale(0.94); }
+  55%  { opacity: 1; transform: translateY(-6px) scale(1.018); }
+  75%  { transform: translateY(2px) scale(0.992); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Hostile/gotcha reporter glow — crimson pulse */
+@keyframes pc-hostile-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(181, 32, 42, 0.5); }
+  50%       { box-shadow: 0 0 0 1px rgba(181, 32, 42, 1), 0 0 22px rgba(181, 32, 42, 0.3); }
+}
+
+/* Friendly reporter glow — green halo */
+@keyframes pc-friendly-glow {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.35); }
+  50%       { box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.85), 0 0 16px rgba(34, 197, 94, 0.18); }
+}
+
+/* Respect reduced motion — disable all custom animations */
+@media (prefers-reduced-motion: reduce) {
+  .pc-spring-card {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .pc-hostile-box,
+  .pc-friendly-box {
+    animation: none !important;
+    box-shadow: none !important;
+  }
 }
 `;
 
@@ -89,23 +135,22 @@ const WAVEFORM_DURATIONS = [0.5, 0.6, 0.4, 0.7, 0.5, 0.45, 0.65, 0.55, 0.4, 0.6]
 
 function WaveformBars() {
   return (
-    <>
-      <style>{WAVEFORM_STYLE}</style>
-      <div className="flex items-center gap-0.5" style={{ height: "28px" }}>
-        {WAVEFORM_DELAYS.map((delay, i) => (
-          <div
-            key={i}
-            className="w-1 rounded-full bg-dw-red origin-center"
-            style={{
-              height: "24px",
-              animation: `waveform ${WAVEFORM_DURATIONS[i]}s ease-in-out ${delay}s infinite alternate`,
-            }}
-          />
-        ))}
-      </div>
-    </>
+    <div className="flex items-center gap-0.5" style={{ height: "28px" }}>
+      {WAVEFORM_DELAYS.map((delay, i) => (
+        <div
+          key={i}
+          className="w-1 rounded-full bg-dw-red origin-center"
+          style={{
+            height: "24px",
+            animation: `waveform ${WAVEFORM_DURATIONS[i]}s ease-in-out ${delay}s infinite alternate`,
+          }}
+        />
+      ))}
+    </div>
   );
 }
+
+const MODES = ["choice", "text", "voice"] as const;
 
 export default function QuestionDisplay({
   question,
@@ -131,6 +176,10 @@ export default function QuestionDisplay({
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Sliding tab indicator
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number } | null>(null);
+
   const { displayText, isComplete } = useTypingAnimation(question.question);
 
   useEffect(() => {
@@ -150,9 +199,33 @@ export default function QuestionDisplay({
     };
   }, []);
 
+  // Track sliding tab indicator position
+  useEffect(() => {
+    const container = tabContainerRef.current;
+    if (!container) return;
+    const modeIndex = MODES.indexOf(mode);
+    const tabs = container.querySelectorAll<HTMLElement>("[data-tab]");
+    const activeTab = tabs[modeIndex];
+    if (activeTab) {
+      setIndicatorStyle({ left: activeTab.offsetLeft, width: activeTab.offsetWidth });
+    }
+  }, [mode]);
+
   const handleChoiceSelect = useCallback(
-    (option: ResponseOption) => {
+    (option: ResponseOption, e: MouseEvent<HTMLButtonElement>) => {
       if (hasAnswered || isSubmitting) return;
+
+      // Physical "delivery" — compress then release before locking in
+      e.currentTarget.animate(
+        [
+          { transform: "scale(1)", offset: 0 },
+          { transform: "scale(0.96)", offset: 0.3 },
+          { transform: "scale(1.03)", offset: 0.65 },
+          { transform: "scale(1)", offset: 1 },
+        ],
+        { duration: 260, easing: "ease-out" }
+      );
+
       setHasAnswered(true);
       onAnswer(option.text, option.tone, "choice");
     },
@@ -238,15 +311,27 @@ export default function QuestionDisplay({
     onAnswer(transcript.trim(), "honest", "voice");
   }, [transcript, hasAnswered, isSubmitting, onAnswer]);
 
-  const questionToneColor =
-    question.tone === "hostile" || question.tone === "gotcha"
-      ? "text-dw-red"
-      : question.tone === "friendly"
-        ? "text-dw-green"
-        : "text-ink3";
+  // Tone-reactive question box
+  const isHostile = question.tone === "hostile" || question.tone === "gotcha";
+  const isFriendly = question.tone === "friendly";
+
+  const questionBoxAnimation: React.CSSProperties = isHostile
+    ? { animation: "pc-hostile-glow 1.8s ease-in-out infinite" }
+    : isFriendly
+      ? { animation: "pc-friendly-glow 2.5s ease-in-out infinite" }
+      : {};
+
+  const questionToneColor = isHostile
+    ? "text-dw-red"
+    : isFriendly
+      ? "text-dw-green"
+      : "text-ink3";
 
   return (
     <div className="mx-auto max-w-2xl">
+      {/* Single style injection for all press conference animations */}
+      <style>{PRESS_CONF_STYLES}</style>
+
       <div className="mb-4 flex items-center justify-between">
         <p className="font-sans text-xs uppercase tracking-widest text-ink3">
           {isFollowUp ? "Follow-up" : `Question ${questionIndex + 1} of ${totalQuestions}`}
@@ -256,7 +341,14 @@ export default function QuestionDisplay({
         </span>
       </div>
 
-      <div className="mb-6 rounded border border-dw-border bg-paper2 p-6">
+      {/* Question box — border and glow react to reporter tone */}
+      <div
+        className={cn(
+          "mb-6 rounded border bg-paper2 p-6",
+          isHostile ? "border-dw-accent/60 pc-hostile-box" : isFriendly ? "border-dw-green/40 pc-friendly-box" : "border-dw-border"
+        )}
+        style={questionBoxAnimation}
+      >
         <div className="mb-3 flex items-baseline gap-2">
           <span className="font-headline text-sm uppercase tracking-wide text-ink">
             {question.reporterName}
@@ -276,16 +368,29 @@ export default function QuestionDisplay({
 
       {isComplete && !hasAnswered && (
         <div className="space-y-4">
-          <div className="flex gap-1 rounded border border-dw-border bg-paper3 p-1">
-            {(["choice", "text", "voice"] as const).map((m) => (
+          {/* Mode tabs — animated sliding indicator */}
+          <div
+            ref={tabContainerRef}
+            className="relative flex gap-1 rounded border border-dw-border bg-paper3 p-1"
+          >
+            {indicatorStyle && (
+              <div
+                className="absolute top-1 bottom-1 rounded bg-paper shadow-sm pointer-events-none"
+                style={{
+                  left: indicatorStyle.left,
+                  width: indicatorStyle.width,
+                  transition: "left 270ms cubic-bezier(0.34, 1.56, 0.64, 1), width 200ms ease",
+                }}
+              />
+            )}
+            {MODES.map((m) => (
               <button
                 key={m}
+                data-tab={m}
                 onClick={() => setMode(m)}
                 className={cn(
-                  "flex-1 rounded px-3 py-2 font-sans text-xs uppercase tracking-wider transition-colors",
-                  mode === m
-                    ? "bg-paper text-ink shadow-sm"
-                    : "text-ink3 hover:text-ink2"
+                  "relative z-10 flex-1 rounded px-3 py-2 font-sans text-xs uppercase tracking-wider transition-colors duration-150",
+                  mode === m ? "text-ink" : "text-ink3 hover:text-ink2"
                 )}
               >
                 {m === "choice"
@@ -299,20 +404,24 @@ export default function QuestionDisplay({
 
           {mode === "choice" && responseOptions && (
             <div className="space-y-3">
-              {responseOptions.map((option) => {
+              {responseOptions.map((option, index) => {
                 const colors = TONE_COLORS[option.tone] ?? TONE_COLORS.coachspeak;
                 return (
                   <button
                     key={option.id}
-                    onClick={() => handleChoiceSelect(option)}
+                    onClick={(e) => handleChoiceSelect(option, e)}
                     disabled={isSubmitting}
                     className={cn(
-                      "w-full rounded border p-4 text-left transition-all",
+                      "pc-spring-card w-full rounded border p-4 text-left",
+                      "transition-[box-shadow,transform] duration-150",
+                      "hover:shadow-md hover:-translate-y-0.5",
                       colors.border,
                       colors.bg,
-                      "hover:shadow-md",
                       "disabled:cursor-not-allowed disabled:opacity-50"
                     )}
+                    style={{
+                      animation: `pc-card-spring-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) ${index * 80}ms both`,
+                    }}
                   >
                     <div className="mb-1 flex items-center gap-2">
                       <span className={cn("font-sans text-xs font-semibold uppercase tracking-wider", colors.label)}>
@@ -367,7 +476,6 @@ export default function QuestionDisplay({
 
           {mode === "voice" && (
             <div className="flex flex-col items-center gap-4 rounded border border-dw-border bg-paper3 p-4 sm:p-8">
-
               {voiceState === "idle" && (
                 <>
                   <button
