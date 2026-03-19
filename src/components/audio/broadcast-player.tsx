@@ -56,6 +56,7 @@ export function BroadcastPlayer({
   const [error, setError] = useState<string | null>(null);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const nextAudioRef = useRef<HTMLAudioElement | null>(null); // preloaded next segment
   const segmentsRef = useRef<AudioSegment[]>([]);
   const currentIndexRef = useRef(0);
   const stateRef = useRef<PlayerState>("idle");
@@ -69,12 +70,21 @@ export function BroadcastPlayer({
     if (index >= segs.length) {
       setPlayerState("done");
       setCurrentSegmentIndex(0);
+      nextAudioRef.current = null;
       return;
     }
 
-    const seg = segs[index];
-    const audio = new Audio(seg.audioUrl);
+    // Use preloaded audio if available (eliminates gap between segments)
+    const audio = nextAudioRef.current ?? new Audio(segs[index].audioUrl);
+    nextAudioRef.current = null;
     audioRef.current = audio;
+
+    // Immediately preload the next segment so it's ready when this one ends
+    if (index + 1 < segs.length) {
+      const preloaded = new Audio(segs[index + 1].audioUrl);
+      preloaded.preload = "auto";
+      nextAudioRef.current = preloaded;
+    }
 
     audio.onended = () => {
       if (stateRef.current === "playing") {
@@ -153,6 +163,7 @@ export function BroadcastPlayer({
       audioRef.current.currentTime = 0;
       audioRef.current = null;
     }
+    nextAudioRef.current = null;
     setPlayerState(segments.length > 0 ? "ready" : "idle");
     setCurrentSegmentIndex(0);
   }, [segments.length]);
@@ -161,6 +172,7 @@ export function BroadcastPlayer({
   useEffect(() => {
     return () => {
       audioRef.current?.pause();
+      nextAudioRef.current = null;
     };
   }, []);
 

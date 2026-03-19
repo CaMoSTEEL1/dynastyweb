@@ -144,8 +144,22 @@ export async function buildPersonaVoiceMapAsync(
     if (voiceId) {
       map.set(persona.name, voiceId);
     } else {
-      // Ultimate fallback: hardcoded IDs
-      map.set(persona.name, buildPersonaVoiceMap([persona]).get(persona.name) ?? VOICE_IDS.host_male);
+      // Fallback to hardcoded IDs — must preserve `index` to avoid everyone landing on host_male
+      let fallbackId: string;
+      if (role.includes("host") || index === 0) {
+        fallbackId = VOICE_IDS.host_male;
+      } else if (role.includes("scout") || role.includes("insider")) {
+        fallbackId = female ? VOICE_IDS.analyst_female : VOICE_IDS.scout_male;
+      } else if (role.includes("reporter") || role.includes("correspondent")) {
+        fallbackId = female ? VOICE_IDS.reporter_female : VOICE_IDS.reporter_male;
+      } else {
+        fallbackId = female
+          ? VOICE_IDS.analyst_female
+          : index % 2 === 1
+            ? VOICE_IDS.analyst_male
+            : VOICE_IDS.scout_male;
+      }
+      map.set(persona.name, fallbackId);
     }
   }
 
