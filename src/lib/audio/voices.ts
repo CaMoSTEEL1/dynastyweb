@@ -39,9 +39,9 @@ export const REPORTER_VOICE_NAMES = ["Daniel", "Lily", "George", "Aria", "Bill",
 // Voice settings tuned for sports broadcast energy
 export const BROADCAST_SETTINGS = {
   stability: 0.35,       // More variation = more natural & expressive
-  similarity_boost: 0.75,
+  similarityBoost: 0.75,
   style: 0.4,            // Some expressiveness
-  use_speaker_boost: true,
+  useSpeakerBoost: true,
 };
 
 export const BROADCAST_MODEL = "eleven_turbo_v2_5"; // Fastest + most cost-effective

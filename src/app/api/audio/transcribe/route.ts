@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ElevenLabsClient } from "elevenlabs";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(req: NextRequest) {
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
     const result = await client.speechToText.convert({
       file: audioFile,
-      model_id: "scribe_v1",
+      modelId: "scribe_v1",
     });
 
     return NextResponse.json({ transcript: result.text ?? "" });

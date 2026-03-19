@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ElevenLabsClient } from "elevenlabs";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -20,10 +20,23 @@ export interface AudioGenerateResponse {
   segments: AudioSegment[];
 }
 
-async function streamToBuffer(stream: AsyncIterable<Buffer>): Promise<Buffer> {
+async function streamToBuffer(stream: ReadableStream<Uint8Array> | AsyncIterable<Buffer>): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.from(chunk));
+  if (stream instanceof ReadableStream) {
+    const reader = stream.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  } else {
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
+    }
   }
   return Buffer.concat(chunks);
 }
@@ -35,10 +48,10 @@ async function generateSegment(
 ): Promise<Buffer> {
   const stream = await client.textToSpeech.convert(voiceId, {
     text,
-    model_id: BROADCAST_MODEL,
-    voice_settings: BROADCAST_SETTINGS,
+    modelId: BROADCAST_MODEL,
+    voiceSettings: BROADCAST_SETTINGS,
   });
-  return streamToBuffer(stream as AsyncIterable<Buffer>);
+  return streamToBuffer(stream as ReadableStream<Uint8Array>);
 }
 
 // Run N async tasks with a concurrency cap

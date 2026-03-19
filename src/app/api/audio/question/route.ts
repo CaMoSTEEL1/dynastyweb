@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ElevenLabsClient } from "elevenlabs";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { createClient } from "@/lib/supabase/server";
 import { getReporterVoiceIdAsync, BROADCAST_SETTINGS, BROADCAST_MODEL } from "@/lib/audio/voices";
 
@@ -29,14 +29,22 @@ export async function POST(req: NextRequest) {
 
     const stream = await elevenlabs.textToSpeech.convert(voiceId, {
       text: questionText,
-      model_id: BROADCAST_MODEL,
-      voice_settings: BROADCAST_SETTINGS,
+      modelId: BROADCAST_MODEL,
+      voiceSettings: BROADCAST_SETTINGS,
     });
 
     // Collect to buffer and return as audio/mpeg response
     const chunks: Buffer[] = [];
-    for await (const chunk of stream as AsyncIterable<Buffer>) {
-      chunks.push(Buffer.from(chunk));
+    const readable = stream as ReadableStream<Uint8Array>;
+    const reader = readable.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(Buffer.from(value));
+      }
+    } finally {
+      reader.releaseLock();
     }
     const buffer = Buffer.concat(chunks);
 
