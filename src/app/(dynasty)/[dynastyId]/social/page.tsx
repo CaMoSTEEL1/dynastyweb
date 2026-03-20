@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -384,20 +385,27 @@ export default function SocialPage() {
         variant="social"
       />
 
-      {/* Tab navigation */}
+      {/* Tab navigation — spring-physics indicator pill */}
       <div className="mt-4 mb-6 flex gap-1 rounded border border-dw-border bg-paper3 p-1">
         {(["fan", "coach", "recruit"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "flex-1 rounded px-3 py-2 font-sans text-xs uppercase tracking-wider transition-colors",
-              activeTab === tab
-                ? "bg-paper text-ink shadow-sm"
-                : "text-ink3 hover:text-ink2"
+              "relative flex-1 rounded px-3 py-2 font-sans text-xs uppercase tracking-wider transition-colors",
+              activeTab === tab ? "text-ink" : "text-ink3 hover:text-ink2"
             )}
           >
-            {tab === "fan" ? "Fan Feed" : tab === "coach" ? "Coach Feed" : "Recruits"}
+            {activeTab === tab && (
+              <motion.div
+                layoutId="tab-indicator"
+                className="absolute inset-0 rounded bg-paper shadow-sm"
+                transition={{ type: "spring", bounce: 0.25, duration: 0.4 }}
+              />
+            )}
+            <span className="relative z-10">
+              {tab === "fan" ? "Fan Feed" : tab === "coach" ? "Coach Feed" : "Recruits"}
+            </span>
           </button>
         ))}
       </div>
@@ -415,11 +423,23 @@ export default function SocialPage() {
           ) : (
             <>
               <div className="mb-4 flex items-center gap-2">
-                <span className="font-sans text-xs text-ink3">
-                  {visibleCount} of {posts.length} posts loaded
-                </span>
-                {visibleCount < posts.length && (
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-dw-green" />
+                {visibleCount < posts.length ? (
+                  <>
+                    <span className="relative flex h-2 w-2 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-dw-red opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-dw-red" />
+                    </span>
+                    <span className="font-sans text-xs font-semibold uppercase tracking-wider text-dw-red">
+                      Live
+                    </span>
+                    <span className="font-sans text-xs text-ink3">
+                      &middot; {visibleCount} of {posts.length}
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-sans text-xs text-ink3">
+                    {posts.length} posts
+                  </span>
                 )}
               </div>
 

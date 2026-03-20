@@ -1,9 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Heart, Repeat2, BadgeCheck } from "lucide-react";
 import type { SocialPost } from "@/lib/social/types";
+import { useEffect, useRef, useState } from "react";
 
 const TYPE_COLORS: Record<SocialPost["type"], { avatar: string; badge: string }> = {
   fan: { avatar: "bg-ink2", badge: "bg-ink2/20 text-ink2" },
@@ -27,26 +28,103 @@ function StarRating({ count }: { count: number }) {
   );
 }
 
+// rAF-based counter that ticks from 0 → target when enabled
+function useCountUp(target: number, enabled: boolean): number {
+  const [value, setValue] = useState(enabled ? 0 : target);
+  const frameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!enabled || target === 0) {
+      setValue(target);
+      return;
+    }
+
+    const duration = 900;
+    const start = performance.now();
+
+    function tick(now: number) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setValue(Math.round(eased * target));
+      if (progress < 1) {
+        frameRef.current = requestAnimationFrame(tick);
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    };
+  }, [target, enabled]);
+
+  return value;
+}
+
+// Entry variant keyed by post type
+function getEntryVariant(type: SocialPost["type"]) {
+  if (type === "rival") {
+    return { initial: { opacity: 0, x: -20 }, animate: { opacity: 1, x: 0 } };
+  }
+  if (type === "insider") {
+    return { initial: { opacity: 0, y: -10 }, animate: { opacity: 1, y: 0 } };
+  }
+  return { initial: { opacity: 0, y: 12 }, animate: { opacity: 1, y: 0 } };
+}
+
 interface SocialPostCardProps {
   post: SocialPost;
   onClick?: (post: SocialPost) => void;
   delay?: number;
+  isNew?: boolean;
 }
 
-export function SocialPostCard({ post, onClick, delay = 0 }: SocialPostCardProps) {
+export function SocialPostCard({ post, onClick, delay = 0, isNew = false }: SocialPostCardProps) {
   const colors = TYPE_COLORS[post.type] ?? TYPE_COLORS.fan;
+  const reducedMotion = useReducedMotion();
+
+  const variant = reducedMotion
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 } }
+    : getEntryVariant(post.type);
+
+  const liveEffect = isNew && !reducedMotion;
+  const likes = useCountUp(post.likes, liveEffect);
+  const reposts = useCountUp(post.reposts, liveEffect);
+
+  const showRivalPulse = post.type === "rival" && liveEffect;
+  const showInsiderShimmer = post.type === "insider" && liveEffect;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={variant.initial}
+      animate={variant.animate}
       transition={{ duration: 0.35, delay }}
       className={cn(
-        "rounded border border-dw-border bg-paper2 p-4",
+        "relative overflow-hidden rounded border border-dw-border bg-paper2 p-4",
         onClick && "cursor-pointer transition-colors hover:bg-paper3"
       )}
       onClick={onClick ? () => onClick(post) : undefined}
     >
+      {/* Rival: crimson border pulse on entry */}
+      {showRivalPulse && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0, 0.7, 0] }}
+          transition={{ duration: 1.5, times: [0, 0.25, 1], ease: "easeOut" }}
+          className="pointer-events-none absolute inset-0 rounded border-2 border-dw-red"
+        />
+      )}
+
+      {/* Insider: gold shimmer sweep on entry */}
+      {showInsiderShimmer && (
+        <motion.div
+          initial={{ x: "-100%" }}
+          animate={{ x: "250%" }}
+          transition={{ duration: 0.85, ease: "easeOut", delay: 0.05 }}
+          className="pointer-events-none absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-dw-accent/25 to-transparent"
+        />
+      )}
+
       <div className="flex gap-3">
         <div
           className={cn(
@@ -96,11 +174,11 @@ export function SocialPostCard({ post, onClick, delay = 0 }: SocialPostCardProps
           <div className="mt-2.5 flex items-center gap-5">
             <span className="flex items-center gap-1.5 text-xs text-ink3">
               <Heart className="h-3.5 w-3.5" />
-              {post.likes.toLocaleString()}
+              {likes.toLocaleString()}
             </span>
             <span className="flex items-center gap-1.5 text-xs text-ink3">
               <Repeat2 className="h-3.5 w-3.5" />
-              {post.reposts.toLocaleString()}
+              {reposts.toLocaleString()}
             </span>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { SocialPost } from "@/lib/social/types";
 import { SocialPostCard } from "./social-post-card";
 
@@ -14,6 +14,14 @@ const TYPE_PRIORITY: Record<SocialPost["type"], number> = {
   recruit: 6,
 };
 
+// Organic timing: burst → ramp → settle
+function getDelay(index: number): number {
+  if (index === 0) return 300;
+  if (index <= 2) return 120 + Math.random() * 80;   // 120–200ms burst
+  if (index <= 6) return 280 + Math.random() * 120;  // 280–400ms ramp
+  return 600 + Math.random() * 300;                  // 600–900ms settle
+}
+
 interface SocialFeedProps {
   posts: SocialPost[];
   onPostClick: (post: SocialPost) => void;
@@ -22,6 +30,7 @@ interface SocialFeedProps {
 
 export function SocialFeed({ posts, onPostClick, onVisibleCountChange }: SocialFeedProps) {
   const [visibleCount, setVisibleCount] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sortedPosts = useMemo(
     () => [...posts].sort((a, b) => TYPE_PRIORITY[a.type] - TYPE_PRIORITY[b.type]),
@@ -31,23 +40,20 @@ export function SocialFeed({ posts, onPostClick, onVisibleCountChange }: SocialF
   useEffect(() => {
     if (sortedPosts.length === 0) return;
 
-    const firstTimer = setTimeout(() => {
-      setVisibleCount(1);
-    }, 300);
+    let current = 0;
 
-    const interval = setInterval(() => {
-      setVisibleCount((prev) => {
-        if (prev >= sortedPosts.length) {
-          clearInterval(interval);
-          return prev;
-        }
-        return prev + 1;
-      });
-    }, 800);
+    function revealNext() {
+      current += 1;
+      setVisibleCount(current);
+      if (current < sortedPosts.length) {
+        timerRef.current = setTimeout(revealNext, getDelay(current));
+      }
+    }
+
+    timerRef.current = setTimeout(revealNext, getDelay(0));
 
     return () => {
-      clearTimeout(firstTimer);
-      clearInterval(interval);
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
     };
   }, [sortedPosts.length]);
 
@@ -64,7 +70,7 @@ export function SocialFeed({ posts, onPostClick, onVisibleCountChange }: SocialF
           key={post.id}
           post={post}
           onClick={onPostClick}
-          delay={i === visibleCount - 1 ? 0.05 : 0}
+          isNew={i === visibleCount - 1}
         />
       ))}
       {visibleCount < sortedPosts.length && (
