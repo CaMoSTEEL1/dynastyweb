@@ -57,6 +57,8 @@ export function AddRecruitForm({
               stars: result.recruit.stars,
               position: result.recruit.position,
               school: result.school,
+              dynastyId,
+              seasonId,
             }),
           }).then(() => onAdded()); // Refresh again once backstory is ready
         }

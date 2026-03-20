@@ -187,12 +187,39 @@ export async function updateRecruitStatus(
     const updatedHistory = [...existingHistory, newEntry];
     const newTrend = inferTrend(newStatus);
 
+    // Refresh backstory on meaningful milestones so it evolves with the recruit
+    const BACKSTORY_UPDATE_STATUSES = new Set(["visited", "leader", "committed", "decommitted", "flipped"]);
+    let updatedBackstory: string | undefined;
+    if (BACKSTORY_UPDATE_STATUSES.has(newStatus)) {
+      try {
+        const backstoryResponse = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 220,
+          system:
+            "You are a college football recruiting insider. Write a vivid 2-3 sentence recruiting backstory that reflects where a recruit stands right now — their background and their current situation in the process. Plain text only.",
+          messages: [
+            {
+              role: "user",
+              content: `Update the backstory for ${recruit.name}, a ${recruit.stars}-star ${recruit.position}. Their status just changed from "${currentStatus}" to "${newStatus}" with ${school} (Coach ${coachName}) in week ${week}. Original backstory: ${recruit.backstory}. Write a fresh 2-3 sentence version that incorporates this development naturally.`,
+            },
+          ],
+        });
+        const textBlock = backstoryResponse.content.find(
+          (b: { type: string }) => b.type === "text"
+        );
+        updatedBackstory = textBlock?.type === "text" ? textBlock.text.trim() : undefined;
+      } catch {
+        // Keep existing backstory if update fails
+      }
+    }
+
     const { error: updateError } = await supabase
       .from("recruits")
       .update({
         status: newStatus,
         trend: newTrend,
         storyline_history: updatedHistory,
+        ...(updatedBackstory ? { backstory: updatedBackstory } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq("id", recruitId);

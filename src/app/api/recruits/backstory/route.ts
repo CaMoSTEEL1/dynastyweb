@@ -16,9 +16,29 @@ export async function POST(req: NextRequest) {
       stars: number;
       position: string;
       school: string;
+      dynastyId: string;
+      seasonId: string;
     };
 
-    const { recruitId, name, stars, position, school } = body;
+    const { recruitId, name, stars, position, school, dynastyId, seasonId } = body;
+
+    // Fetch existing backstories so Claude creates something distinct
+    const { data: existingRecruits } = await supabase
+      .from("recruits")
+      .select("backstory")
+      .eq("dynasty_id", dynastyId)
+      .eq("season_id", seasonId)
+      .neq("id", recruitId)
+      .neq("backstory", "");
+
+    const existingBackstories = (existingRecruits ?? [])
+      .map((r: { backstory: string }) => r.backstory)
+      .filter(Boolean);
+
+    const avoidClause =
+      existingBackstories.length > 0
+        ? `\n\nOther recruits on this board already have these backstories — do NOT repeat their hometowns, personality types, family situations, or core motivations:\n${existingBackstories.map((b, i) => `${i + 1}. ${b}`).join("\n")}`
+        : "";
 
     const anthropic = new Anthropic();
     let backstory = "";
@@ -26,13 +46,13 @@ export async function POST(req: NextRequest) {
     try {
       const response = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
+        max_tokens: 220,
         system:
-          "You are a college football recruiting insider. Write brief, vivid backstories for high school recruits. No JSON, just plain text. 2-3 sentences max.",
+          "You are a college football recruiting insider. Write brief, vivid backstories for high school recruits. Every backstory must be completely unique — distinct hometown, background, personality, and motivation. Vary widely: small-town sleeper, big-city kid, military family, academic standout, underdog story, blue-chip primetime player, etc. No JSON, just plain text. 2-3 sentences max.",
         messages: [
           {
             role: "user",
-            content: `Write a brief backstory for ${name}, a ${stars}-star ${position} recruit who has been offered by ${school}. Include a hint about their personality and what motivates them as a recruit. Keep it to 2-3 sentences.`,
+            content: `Write a unique backstory for ${name}, a ${stars}-star ${position} recruit who has been offered by ${school}. Include a specific, concrete detail about their background or what drives them as a recruit. 2-3 sentences.${avoidClause}`,
           },
         ],
       });
